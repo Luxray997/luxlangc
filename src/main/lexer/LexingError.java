@@ -1,7 +1,9 @@
 package main.lexer;
 
-public class LexingError extends RuntimeException {
+import main.errors.SourceCodeError;
+
+public class LexingError extends SourceCodeError {
     public LexingError(int line, int column) {
-        super("Error while lexing source at line " + line + " and column " + column);
+        super("Error while lexing", line, column);
     }
 }
