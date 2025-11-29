@@ -9,6 +9,6 @@ public class SourceCodeError extends RuntimeException {
     }
 
     public SourceCodeError(String message, int line, int column) {
-        super(message + "(line " + line + ", column " + column + ")");
+        super(message + " (line " + line + ", column " + column + ")");
     }
 }

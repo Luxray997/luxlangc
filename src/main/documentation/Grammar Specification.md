@@ -1,0 +1,76 @@
+# Grammar Specification
+
+## Key
+- `<>` — Grammar element
+- `{}` — Unknown-value token
+- `''` — Known-value token
+- `()` — Grouping
+- `*` — 0 or more
+- `?` — 0 or 1
+- `|` — Or
+
+---
+
+## Grammar
+
+```ebnf
+program              : <function_declaration>*
+
+function_declaration : <type> {IDENTIFIER} '(' <param_list>? ')' <code_block>
+
+type                 : 'void' | 'byte' | 'ubyte' | 'short' | 'ushort'
+                     | 'int' | 'uint' | 'long' | 'ulong'
+                     | 'float' | 'double' | 'bool'
+
+param_list           : <type> {IDENTIFIER} (',' <type> {IDENTIFIER})*
+
+code_block           : '{' <statement>* '}'
+
+statement            : <code_block>
+                     | 'if' '(' <expression> ')' <statement> ('else' <statement>)?
+                     | 'while' '(' <expression> ')' <statement>
+                     | 'do' <statement> 'while' '(' <expression> ')' ';'
+                     | 'for' '(' <for_init>? ';' <expression>? ';' <assignment>? ')' <statement>
+                     | 'return' <expression>? ';'
+                     | <variable_declaration> ';'
+                     | <assignment> ';'
+
+for_init             : <variable_declaration> | <assignment>
+
+variable_declaration : <type> {IDENTIFIER} ('=' <expression>)?
+
+expression           : <logical_or>
+
+literal              : {LITERAL_INTEGER}
+                     | {LITERAL_FLOATINGPT}
+                     | 'true'
+                     | 'false'
+                     | 'null'
+
+primary              : <literal>
+                     | {IDENTIFIER} ('(' <argument_list>? ')')?
+                     | '(' <expression> ')'
+
+unary                : (('!' | '-' | '~') <unary>) | <primary>
+
+multiplicative       : <unary> (('*' | '/' | '%') <unary>)*
+
+additive             : <multiplicative> (('+' | '-') <multiplicative>)*
+
+relational           : <additive> (('<' | '<=' | '>' | '>=') <additive>)*
+
+equivalence          : <relational> (('==' | '!=') <relational>)*
+
+bitwise_and          : <equivalence> ('&' <equivalence>)*
+
+bitwise_xor          : <bitwise_and> ('^' <bitwise_and>)*
+
+bitwise_or           : <bitwise_xor> ('|' <bitwise_xor>)*
+
+logical_and          : <bitwise_or> ('&&' <bitwise_or>)*
+
+logical_or           : <logical_and> ('||' <logical_and>)*
+
+assignment           : {IDENTIFIER} '=' <expression>
+
+argument_list        : <expression> (',' <expression>)*

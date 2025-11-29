@@ -18,6 +18,7 @@ public class Parser {
 
     public Parser(List<Token> tokens) {
         this.tokens = tokens;
+        this.i = 0;
     }
 
     public Program parse() {
@@ -453,7 +454,6 @@ public class Parser {
                 return new VariableExpression(identifierName);
             }
 
-            String name = currentToken.lexeme();
             increment();
 
             List<Expression> arguments = List.of();
@@ -464,7 +464,7 @@ public class Parser {
             expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
             increment();
 
-            return new FunctionCall(name, arguments);
+            return new FunctionCall(identifierName, arguments);
         }
 
         increment();
@@ -474,6 +474,14 @@ public class Parser {
             case TRUE -> new KnownLiteral(KnownLiteral.Value.TRUE);
             case FALSE -> new KnownLiteral(KnownLiteral.Value.FALSE);
             case NULL -> new KnownLiteral(KnownLiteral.Value.NULL);
+            case LEFT_PAREN -> {
+                Expression result = parseExpression();
+
+                expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
+                increment();
+
+                yield result;
+            }
             default -> throw new ParsingError("Could not parse expression", currentToken);
         };
     }
