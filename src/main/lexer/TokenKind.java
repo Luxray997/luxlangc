@@ -1,28 +1,52 @@
 package main.lexer;
 
 public enum TokenKind {
-    // Keywords
+    // Keywords (Types)
     VOID("void"),
     BOOL("bool"),
-    BYTE("byte"), UBYTE("ubyte"),
-    SHORT("short"), USHORT("ushort"),
-    INT("int"), UINT("uint"),
-    LONG("long"), ULONG("ulong"),
-    IF("if"), ELSE("else"),
-    DO("do"), WHILE("while"),
+    BYTE("byte"),
+    UBYTE("ubyte"),
+    SHORT("short"),
+    USHORT("ushort"),
+    INT("int"),
+    UINT("uint"),
+    LONG("long"),
+    ULONG("ulong"),
+    FLOAT("float"),
+    DOUBLE("double"),
+    // Keywords (Logical Flow)
+    IF("if"),
+    ELSE("else"),
+    DO("do"),
+    WHILE("while"),
     FOR("for"),
     RETURN("return"),
     // Identifiers and Literals
     IDENTIFIER(null),
     LITERAL_INTEGER(null),
     LITERAL_FLOATINGPT(null),
-    TRUE("true"), FALSE("false"),
+    TRUE("true"),
+    FALSE("false"),
     NULL("null"),
     // Operators
-    ADD("+"), SUB("-"), MULT("*"), DIV("/"), MOD("%"),
-    LOGICAL_NOT("!"), LOGICAL_AND("&&"), LOGICAL_OR("||"),
-    BITWISE_NOT("~"), BITWISE_AND("&"), BITWISE_OR("|"), BITWISE_XOR("^"),
-    EQUAL("=="), NOT_EQUAL("!="), LESS("<"), LESS_EQUAL("<="), GREATER(">"), GREATER_EQUAL(">="),
+    ADD("+"),
+    SUB("-"),
+    MULT("*"),
+    DIV("/"),
+    MOD("%"),
+    LOGICAL_NOT("!"),
+    LOGICAL_AND("&&"),
+    LOGICAL_OR("||"),
+    BITWISE_NOT("~"),
+    BITWISE_AND("&"),
+    BITWISE_OR("|"),
+    BITWISE_XOR("^"),
+    EQUAL("=="),
+    NOT_EQUAL("!="),
+    LESS("<"),
+    LESS_EQUAL("<="),
+    GREATER(">"),
+    GREATER_EQUAL(">="),
     ASSIGN("="),
     // Punctuation
     LEFT_PAREN("("), RIGHT_PAREN(")"),
@@ -43,6 +67,13 @@ public enum TokenKind {
         return lexeme;
     }
 
+    public boolean isTypeKind() {
+        return switch (this) {
+            case VOID, DOUBLE, BOOL, BYTE, UBYTE, SHORT, USHORT, INT, UINT, LONG, ULONG, FLOAT -> true;
+            default -> false;
+        };
+    }
+
     public static TokenKind getKeywordOrIdentifier(String lexeme) {
         return switch (lexeme) {
             case "void"   -> VOID;
@@ -55,6 +86,8 @@ public enum TokenKind {
             case "uint"   -> UINT;
             case "long"   -> LONG;
             case "ulong"  -> ULONG;
+            case "float"  -> FLOAT;
+            case "double" -> DOUBLE;
             case "if"     -> IF;
             case "else"   -> ELSE;
             case "do"     -> DO;
