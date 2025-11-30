@@ -473,7 +473,6 @@ public class Parser {
             case LITERAL_FLOATINGPT -> new FloatingPointLiteral(currentToken.lexeme());
             case TRUE               -> new BooleanLiteral(BooleanLiteral.Value.TRUE);
             case FALSE              -> new BooleanLiteral(BooleanLiteral.Value.FALSE);
-            case NULL               -> new NullLiteral();
             case LEFT_PAREN         -> {
                 Expression result = parseExpression();
 

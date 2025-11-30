@@ -45,7 +45,6 @@ literal              : {LITERAL_INTEGER}
                      | {LITERAL_FLOATINGPT}
                      | 'true'
                      | 'false'
-                     | 'null'
 
 primary              : <literal>
                      | {IDENTIFIER} ('(' <argument_list>? ')')?

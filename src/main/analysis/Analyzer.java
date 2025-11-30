@@ -92,7 +92,6 @@ public class Analyzer {
             case FloatingPointLiteral floatingPointLiteral -> analyzeFloatingPointLiteral(floatingPointLiteral, scope);
             case IntegerLiteral       integerLiteral       -> analyzeIntegerLiteral(integerLiteral, scope);
             case BooleanLiteral       booleanLiteral       -> Type.BOOL;
-            case NullLiteral          nullLiteral          -> Type.VOID;
         };
     }
 
@@ -162,7 +161,7 @@ public class Analyzer {
     }
 
     private Type analyzeFloatingPointLiteral(FloatingPointLiteral floatingPointLiteral, Scope scope) {
-        // Assumes from the lexer that the literal starts with a digit and contains one or more digits or '.' characters
+        // Assumes from the lexer that the literal starts with a digit, contains one or more digits and one or more '.' characters
         String literalValue = floatingPointLiteral.value();
         if (literalValue.endsWith(".")) {
             errors.add(new PermissibleError("Floating point literal cannot end with a decimal point"));
@@ -180,7 +179,7 @@ public class Analyzer {
         Type leftType = analyzeExpression(binaryOperation.left(), scope);
         Type rightType = analyzeExpression(binaryOperation.right(), scope);
         if (leftType != rightType) {
-            errors.add(new PermissibleError("Types differ for binary operation. Left type: " + leftType.toString() + ". Right type: " + rightType.toString()));
+            errors.add(new PermissibleError("Types differ for binary operation. Left type: " + leftType + ". Right type: " + rightType));
         }
 
         Type operandType = leftType; // Assume left operand type for further analysis
@@ -248,7 +247,10 @@ public class Analyzer {
         }
 
         if (forStatement.condition().isPresent()) {
-            analyzeExpression(forStatement.condition().get(), headerScope);
+            Type conditionType = analyzeExpression(forStatement.condition().get(), headerScope);
+            if (conditionType != Type.BOOL) {
+                errors.add(new PermissibleError("For loop contains non-boolean condition"));
+            }
         }
 
         if (forStatement.update().isPresent()) {
@@ -260,17 +262,29 @@ public class Analyzer {
 
     private void analyzeDoWhileStatement(DoWhileStatement doWhileStatement, Scope scope) {
         analyzeStatement(doWhileStatement.body(), scope);
-        analyzeExpression(doWhileStatement.condition(), scope);
+
+        Type conditionType = analyzeExpression(doWhileStatement.condition(), scope);
+        if (conditionType != Type.BOOL) {
+            errors.add(new PermissibleError("Do-While loop contains non-boolean condition"));
+        }
     }
 
 
     private void analyzeWhileStatement(WhileStatement whileStatement, Scope scope) {
-        analyzeExpression(whileStatement.condition(), scope);
+        Type conditionType = analyzeExpression(whileStatement.condition(), scope);
+        if (conditionType != Type.BOOL) {
+            errors.add(new PermissibleError("While loop contains non-boolean condition"));
+        }
+
         analyzeStatement(whileStatement.body(), scope);
     }
 
     private void analyzeIfStatement(IfStatement ifStatement, Scope scope) {
-        analyzeExpression(ifStatement.condition(), scope);
+        Type conditionType = analyzeExpression(ifStatement.condition(), scope);
+        if (conditionType != Type.BOOL) {
+            errors.add(new PermissibleError("If statement contains non-boolean condition"));
+        }
+
         analyzeStatement(ifStatement.body(), scope);
 
         if (ifStatement.elseBody().isPresent()) {

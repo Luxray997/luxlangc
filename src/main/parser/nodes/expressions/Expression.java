@@ -6,6 +6,5 @@ public sealed interface Expression permits FunctionCall,
                                            VariableExpression,
                                            FloatingPointLiteral,
                                            IntegerLiteral,
-                                           BooleanLiteral,
-                                           NullLiteral
+                                           BooleanLiteral
 { }
