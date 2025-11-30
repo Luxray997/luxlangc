@@ -1,7 +1,7 @@
 package main.parser.nodes.expressions;
 
 public record BinaryOperation(
-    BinaryOperation.Type type,
+    BinaryOperation.Type operation,
     Expression left,
     Expression right
 ) implements Expression {
@@ -21,6 +21,13 @@ public record BinaryOperation(
         LESS,
         LESS_EQUAL,
         GREATER,
-        GREATER_EQUAL
+        GREATER_EQUAL;
+
+        public boolean isEqualityOperation() {
+            return switch (this) {
+                case EQUAL, NOT_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL -> true;
+                default -> false;
+            };
+        }
     }
 }
