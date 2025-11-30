@@ -29,28 +29,29 @@ public class Analyzer {
     private void analyzeProgram() {
         Scope globalScope = new Scope(null);
         for (var function : program.functionDeclarations()) {
-            if (globalScope.hasSymbol(function.name())) {
-                errors.add(new PermissibleError("Function with name '" + function.name() + "' conflicts with another symbol in scope"));
+            if (globalScope.hasFunction(function.name())) {
+                errors.add(new PermissibleError("Function with name '" + function.name() + "' conflicts with another function in scope"));
                 continue;
             }
             globalScope.addFunction(function);
         }
 
         for (var function : program.functionDeclarations()) {
-            analyzeFunction(function, globalScope);
+            analyzeFunctionDeclaration(function, globalScope);
         }
     }
 
-    private void analyzeFunction(FunctionDeclaration functionDeclaration, Scope scope) {
+    private void analyzeFunctionDeclaration(FunctionDeclaration functionDeclaration, Scope scope) {
+        final Scope functionScope = new Scope(scope);
         for (var parameter : functionDeclaration.parameters()) {
-            if (scope.hasSymbol(parameter.name())) {
-                errors.add(new PermissibleError("Parameter with name '" + parameter.name() + "' conflicts with another symbol in scope"));
+            if (functionScope.hasVariable(parameter.name())) {
+                errors.add(new PermissibleError("Parameter with name '" + parameter.name() + "' conflicts with another variable in scope"));
                 continue;
             }
-            scope.addVariable(parameter);
+            functionScope.addVariable(parameter);
         }
 
-        analyzeCodeBlock(functionDeclaration.body(), scope);
+        analyzeCodeBlock(functionDeclaration.body(), functionScope);
     }
 
     private void analyzeCodeBlock(CodeBlock codeBlock, Scope parentScope) {
@@ -169,7 +170,7 @@ public class Analyzer {
 
         int decimalIndex = literalValue.indexOf('.');
         if (literalValue.indexOf('.', decimalIndex + 1) >= 0) {
-            errors.add(new PermissibleError("Floating point literal cannot contain more than two decimal points"));
+            errors.add(new PermissibleError("Floating point literal cannot contain more than one decimal point"));
         }
 
         return Type.DOUBLE;
@@ -182,7 +183,7 @@ public class Analyzer {
             errors.add(new PermissibleError("Types differ for binary operation. Left type: " + leftType.toString() + ". Right type: " + rightType.toString()));
         }
 
-        Type operandType = leftType; // Assume left operation for further analysis
+        Type operandType = leftType; // Assume left operand type for further analysis
         BinaryOperation.Type operation = binaryOperation.operation();
         if (!isValidBinaryOperation(operandType, operation)) {
             errors.add(new PermissibleError("Operator '" + operation + "' is not valid between values of type '" + operandType + "'"));
@@ -192,7 +193,7 @@ public class Analyzer {
     }
 
     private Type getBinaryOperationResultType(Type operandType, BinaryOperation.Type operation) {
-        return operation.isEqualityOperation() ? Type.BOOL : operandType;
+        return operation.isComparisonOperation() ? Type.BOOL : operandType;
     }
 
     private void analyzeAssignment(Assignment assignment, Scope scope) {
@@ -212,8 +213,9 @@ public class Analyzer {
     }
 
     private void analyzeVariableDeclaration(VariableDeclaration variableDeclaration, Scope scope) {
-        if (scope.hasSymbol(variableDeclaration.name())) {
-            errors.add(new PermissibleError("Variable with name '" + variableDeclaration.name() + "' conflicts with another symbol in scope"));
+        if (scope.hasVariable(variableDeclaration.name())) {
+            errors.add(new PermissibleError("Variable with name '" + variableDeclaration.name() + "' conflicts with another variable in scope"));
+            return;
         }
 
         if (variableDeclaration.type() == Type.VOID) {

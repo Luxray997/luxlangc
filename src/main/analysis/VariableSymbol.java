@@ -7,7 +7,7 @@ import main.parser.nodes.statements.VariableDeclaration;
 public record VariableSymbol(
     String name,
     Type type
-) implements Symbol {
+) {
     public static VariableSymbol from(Parameter parameter) {
         return new VariableSymbol(parameter.name(), parameter.type());
     }

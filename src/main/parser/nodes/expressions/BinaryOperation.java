@@ -23,7 +23,7 @@ public record BinaryOperation(
         GREATER,
         GREATER_EQUAL;
 
-        public boolean isEqualityOperation() {
+        public boolean isComparisonOperation() {
             return switch (this) {
                 case EQUAL, NOT_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL -> true;
                 default -> false;

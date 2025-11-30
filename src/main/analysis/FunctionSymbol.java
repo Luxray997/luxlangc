@@ -12,7 +12,7 @@ public record FunctionSymbol(
         String name,
         Type returnType,
         List<Type> parameterTypes
-) implements Symbol {
+) {
     public static FunctionSymbol from(FunctionDeclaration functionDeclaration) {
         List<Type> parameterTypes = functionDeclaration.parameters()
                 .stream()

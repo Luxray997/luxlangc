@@ -9,57 +9,52 @@ import java.util.Map;
 
 public class Scope {
     private final Scope parent;
-    private final Map<String, Symbol> symbols;
+    private final Map<String, FunctionSymbol> functionSymbols;
+    private final Map<String, VariableSymbol> variableSymbols;
+
 
     public Scope(Scope parent) {
         this.parent = parent;
-        this.symbols = new HashMap<>();
+        this.functionSymbols = new HashMap<>();
+        this.variableSymbols = new HashMap<>();
     }
 
     public VariableSymbol getVariable(String variableName) {
-        return (VariableSymbol) getSymbol(variableName);
+        VariableSymbol variable = variableSymbols.get(variableName);
+        if (variable == null) {
+            return parent.getVariable(variableName);
+        }
+        return variable;
     }
 
     public FunctionSymbol getFunction(String functionName) {
-        return (FunctionSymbol) getSymbol(functionName);
+        FunctionSymbol function = functionSymbols.get(functionName);
+        if (function == null) {
+            return parent.getFunction(functionName);
+        }
+        return function;
     }
 
     public boolean hasVariable(String variableName) {
-        if (!hasSymbol(variableName)) return false;
-
-        return getSymbol(variableName) instanceof VariableSymbol;
+        return variableSymbols.containsKey(variableName) || (parent != null && parent.hasVariable(variableName));
     }
 
-    public boolean hasFunction(String variableName) {
-        if (!hasSymbol(variableName)) return false;
-
-        return getSymbol(variableName) instanceof FunctionSymbol;
-    }
-
-    public boolean hasSymbol(String symbolName) {
-        return symbols.containsKey(symbolName) || (parent != null && parent.hasSymbol(symbolName));
-    }
-
-    public Symbol getSymbol(String symbolName) {
-        Symbol thisScopeSymbol = symbols.get(symbolName);
-        if (thisScopeSymbol == null) {
-            return parent.getSymbol(symbolName);
-        }
-        return thisScopeSymbol;
+    public boolean hasFunction(String functionName) {
+        return functionSymbols.containsKey(functionName) || (parent != null && parent.hasFunction(functionName));
     }
 
     public void addFunction(FunctionDeclaration functionDeclaration) {
-        Symbol symbol = FunctionSymbol.from(functionDeclaration);
-        symbols.put(symbol.name(), symbol);
+        var symbol = FunctionSymbol.from(functionDeclaration);
+        functionSymbols.put(symbol.name(), symbol);
     }
 
     public void addVariable(VariableDeclaration variableDeclaration) {
-        Symbol symbol = VariableSymbol.from(variableDeclaration);
-        symbols.put(symbol.name(), symbol);
+        var symbol = VariableSymbol.from(variableDeclaration);
+        variableSymbols.put(symbol.name(), symbol);
     }
 
     public void addVariable(Parameter parameter) {
-        Symbol symbol = VariableSymbol.from(parameter);
-        symbols.put(symbol.name(), symbol);
+        var symbol = VariableSymbol.from(parameter);
+        variableSymbols.put(symbol.name(), symbol);
     }
 }
