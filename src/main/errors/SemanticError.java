@@ -1,4 +1,3 @@
 package main.errors;
 
-public record SemanticError(String message) {
-}
+public record SemanticError(String message) { }
