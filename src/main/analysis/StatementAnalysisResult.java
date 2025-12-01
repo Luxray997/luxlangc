@@ -1,3 +1,3 @@
 package main.analysis;
 
-public record StatementAnalysisResult(Boolean hasGuaranteedReturn) { }
+public record StatementAnalysisResult(boolean hasGuaranteedReturn) { }

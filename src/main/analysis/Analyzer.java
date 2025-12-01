@@ -1,6 +1,6 @@
 package main.analysis;
 
-import main.errors.PermissibleError;
+import main.errors.SemanticError;
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Program;
 import main.parser.nodes.Type;
@@ -14,14 +14,14 @@ import static main.util.StringUtils.typeListAsString;
 
 public class Analyzer {
     private final Program program;
-    private final List<PermissibleError> errors;
+    private final List<SemanticError> errors;
 
     public Analyzer(Program program) {
         this.program = program;
         this.errors = new ArrayList<>();
     }
 
-    public List<PermissibleError> runAnalysis() {
+    public List<SemanticError> runAnalysis() {
         analyzeProgram();
         return errors;
     }
@@ -30,7 +30,7 @@ public class Analyzer {
         Scope globalScope = new Scope(null);
         for (var function : program.functionDeclarations()) {
             if (globalScope.hasFunction(function.name())) {
-                errors.add(new PermissibleError("Function with name '" + function.name() + "' conflicts with another function in scope"));
+                errors.add(new SemanticError("Function with name '" + function.name() + "' conflicts with another function in scope"));
                 continue;
             }
             globalScope.addFunction(function);
@@ -45,7 +45,7 @@ public class Analyzer {
         final Scope functionScope = new Scope(scope);
         for (var parameter : functionDeclaration.parameters()) {
             if (functionScope.hasVariable(parameter.name())) {
-                errors.add(new PermissibleError("Parameter with name '" + parameter.name() + "' conflicts with another variable in scope"));
+                errors.add(new SemanticError("Parameter with name '" + parameter.name() + "' conflicts with another variable in scope"));
                 continue;
             }
             functionScope.addVariable(parameter);
@@ -57,7 +57,7 @@ public class Analyzer {
             return;
         }
         if (!analysisResult.hasGuaranteedReturn()) {
-            errors.add(new PermissibleError("Not all code paths return a value"));
+            errors.add(new SemanticError("Not all code paths return a value"));
         }
 
     }
@@ -67,7 +67,7 @@ public class Analyzer {
         boolean guaranteedReturn = false;
         for (var statement : codeBlock.statements()) {
             if (guaranteedReturn) {
-                errors.add(new PermissibleError("Unreachable statement"));
+                errors.add(new SemanticError("Unreachable statement"));
                 analyzeStatement(statement, thisScope, functionReturnType);
                 continue;
             }
@@ -113,7 +113,7 @@ public class Analyzer {
 
     private Type analyzeVariableExpression(VariableExpression variableExpression, Scope scope) {
         if (!scope.hasVariable(variableExpression.name())) {
-            errors.add(new PermissibleError("Variable with name '" + variableExpression.name() + "' is not defined in scope"));
+            errors.add(new SemanticError("Variable with name '" + variableExpression.name() + "' is not defined in scope"));
             return Type.VOID;
         }
 
@@ -125,7 +125,7 @@ public class Analyzer {
         var operation = unaryOperation.operation();
         var operandType = analyzeExpression(unaryOperation.operand(), scope);
         if (!isValidUnaryOperation(operandType, operation)) {
-            errors.add(new PermissibleError("Operator '" + operation + "' is not valid on type '" + operandType + "'"));
+            errors.add(new SemanticError("Operator '" + operation + "' is not valid on type '" + operandType + "'"));
         }
         return operandType;
     }
@@ -144,7 +144,7 @@ public class Analyzer {
 
     private Type analyzeFunctionCall(FunctionCall functionCall, Scope scope) {
         if (!scope.hasFunction(functionCall.name())) {
-            errors.add(new PermissibleError("Function with name '" + functionCall.name() + "' is not defined in scope"));
+            errors.add(new SemanticError("Function with name '" + functionCall.name() + "' is not defined in scope"));
             return Type.VOID;
         }
 
@@ -158,7 +158,7 @@ public class Analyzer {
         }
 
         if (!argumentTypes.equals(parameterTypes)) {
-            errors.add(new PermissibleError(
+            errors.add(new SemanticError(
                 """
                 Type mismatch for function '%s'
                 Expected: %s
@@ -180,12 +180,12 @@ public class Analyzer {
         // Assumes from the lexer that the literal starts with a digit, contains one or more digits and one or more '.' characters
         String literalValue = floatingPointLiteral.value();
         if (literalValue.endsWith(".")) {
-            errors.add(new PermissibleError("Floating point literal cannot end with a decimal point"));
+            errors.add(new SemanticError("Floating point literal cannot end with a decimal point"));
         }
 
         int decimalIndex = literalValue.indexOf('.');
         if (literalValue.indexOf('.', decimalIndex + 1) >= 0) {
-            errors.add(new PermissibleError("Floating point literal cannot contain more than one decimal point"));
+            errors.add(new SemanticError("Floating point literal cannot contain more than one decimal point"));
         }
 
         return Type.DOUBLE;
@@ -195,25 +195,25 @@ public class Analyzer {
         Type leftType = analyzeExpression(binaryOperation.left(), scope);
         Type rightType = analyzeExpression(binaryOperation.right(), scope);
         if (leftType != rightType) {
-            errors.add(new PermissibleError("Types differ for binary operation. Left type: " + leftType + ". Right type: " + rightType));
+            errors.add(new SemanticError("Types differ for binary operation. Left type: " + leftType + ". Right type: " + rightType));
         }
 
         Type operandType = leftType; // Assume left operand type for further analysis
         BinaryOperation.Type operation = binaryOperation.operation();
         if (!isValidBinaryOperation(operandType, operation)) {
-            errors.add(new PermissibleError("Operator '" + operation + "' is not valid between values of type '" + operandType + "'"));
+            errors.add(new SemanticError("Operator '" + operation + "' is not valid between values of type '" + operandType + "'"));
         }
 
         return getBinaryOperationResultType(operandType, operation);
     }
 
     private Type getBinaryOperationResultType(Type operandType, BinaryOperation.Type operation) {
-        return operation.isComparisonOperation() ? Type.BOOL : operandType;
+        return operation.isComparisonOperation() || operation.isLogicalOperation() ? Type.BOOL : operandType;
     }
 
     private StatementAnalysisResult analyzeAssignment(Assignment assignment, Scope scope) {
         if (!scope.hasVariable(assignment.variableName())) {
-            errors.add(new PermissibleError("Could not find variable with name '" + assignment.variableName() + "'"));
+            errors.add(new SemanticError("Could not find variable with name '" + assignment.variableName() + "'"));
             analyzeExpression(assignment.value(), scope);
             return new StatementAnalysisResult(false);
         }
@@ -223,7 +223,7 @@ public class Analyzer {
         Type assignmentType = analyzeExpression(assignment.value(), scope);
 
         if (target.type() != assignmentType) {
-            errors.add(new PermissibleError("Variable '" + target.name() + "' with type '" + target.type() + "' assigned to value of type '" + assignmentType + "'"));
+            errors.add(new SemanticError("Variable '" + target.name() + "' with type '" + target.type() + "' assigned to value of type '" + assignmentType + "'"));
         }
 
         return new StatementAnalysisResult(false);
@@ -231,12 +231,12 @@ public class Analyzer {
 
     private StatementAnalysisResult analyzeVariableDeclaration(VariableDeclaration variableDeclaration, Scope scope) {
         if (scope.hasVariable(variableDeclaration.name())) {
-            errors.add(new PermissibleError("Variable with name '" + variableDeclaration.name() + "' conflicts with another variable in scope"));
+            errors.add(new SemanticError("Variable with name '" + variableDeclaration.name() + "' conflicts with another variable in scope"));
             return new StatementAnalysisResult(false);
         }
 
         if (variableDeclaration.type() == Type.VOID) {
-            errors.add(new PermissibleError("Variable cannot be declared as void type"));
+            errors.add(new SemanticError("Variable cannot be declared as void type"));
         }
 
         scope.addVariable(variableDeclaration);
@@ -244,7 +244,7 @@ public class Analyzer {
         if (variableDeclaration.initialValue().isPresent()) {
             Type initialValueType = analyzeExpression(variableDeclaration.initialValue().get(), scope);
             if (variableDeclaration.type() != initialValueType) {
-                errors.add(new PermissibleError("Variable '" + variableDeclaration.name() + "' with type '" + variableDeclaration.type() + "' assigned to value of type '" + initialValueType + "'"));
+                errors.add(new SemanticError("Variable '" + variableDeclaration.name() + "' with type '" + variableDeclaration.type() + "' assigned to value of type '" + initialValueType + "'"));
             }
         }
 
@@ -254,15 +254,15 @@ public class Analyzer {
     private StatementAnalysisResult analyzeReturnStatement(ReturnStatement returnStatement, Scope scope, Type functionReturnType) {
         if (returnStatement.value().isPresent()) {
             if (functionReturnType == Type.VOID) {
-                errors.add(new PermissibleError("Returned a value in void function"));
+                errors.add(new SemanticError("Returned a value in void function"));
                 return new StatementAnalysisResult(true);
             }
             Type returnType = analyzeExpression(returnStatement.value().get(), scope);
             if (returnType != functionReturnType) {
-                errors.add(new PermissibleError("Returned value of type '" + returnType + "' in function with return type of '" + functionReturnType + "'"));
+                errors.add(new SemanticError("Returned value of type '" + returnType + "' in function with return type of '" + functionReturnType + "'"));
             }
         } else if (functionReturnType != Type.VOID) {
-            errors.add(new PermissibleError("Return value expected"));
+            errors.add(new SemanticError("Return value expected"));
         }
 
         return new StatementAnalysisResult(true);
@@ -277,12 +277,12 @@ public class Analyzer {
             }
         }
 
-        var alwaysTrue = false;
+        var alwaysTrue = forStatement.condition().isEmpty();
 
         if (forStatement.condition().isPresent()) {
             Type conditionType = analyzeExpression(forStatement.condition().get(), headerScope);
             if (conditionType != Type.BOOL) {
-                errors.add(new PermissibleError("For loop contains non-boolean condition"));
+                errors.add(new SemanticError("For loop contains non-boolean condition"));
             }
             alwaysTrue = forStatement.condition().get() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;
         }
@@ -301,7 +301,7 @@ public class Analyzer {
 
         Type conditionType = analyzeExpression(doWhileStatement.condition(), scope);
         if (conditionType != Type.BOOL) {
-            errors.add(new PermissibleError("Do-While loop contains non-boolean condition"));
+            errors.add(new SemanticError("Do-While loop contains non-boolean condition"));
         }
 
         return new StatementAnalysisResult(analysisResult.hasGuaranteedReturn());
@@ -311,7 +311,7 @@ public class Analyzer {
     private StatementAnalysisResult analyzeWhileStatement(WhileStatement whileStatement, Scope scope, Type functionReturnType) {
         Type conditionType = analyzeExpression(whileStatement.condition(), scope);
         if (conditionType != Type.BOOL) {
-            errors.add(new PermissibleError("While loop contains non-boolean condition"));
+            errors.add(new SemanticError("While loop contains non-boolean condition"));
         }
 
         var alwaysTrue = whileStatement.condition() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;
@@ -325,7 +325,7 @@ public class Analyzer {
     private StatementAnalysisResult analyzeIfStatement(IfStatement ifStatement, Scope scope, Type functionReturnType) {
         Type conditionType = analyzeExpression(ifStatement.condition(), scope);
         if (conditionType != Type.BOOL) {
-            errors.add(new PermissibleError("If statement contains non-boolean condition"));
+            errors.add(new SemanticError("If statement contains non-boolean condition"));
         }
 
         var alwaysTrue = ifStatement.condition() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;

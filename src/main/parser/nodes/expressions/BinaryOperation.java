@@ -29,5 +29,12 @@ public record BinaryOperation(
                 default -> false;
             };
         }
+
+        public boolean isLogicalOperation() {
+            return switch (this) {
+                case LOGICAL_AND, LOGICAL_OR -> true;
+                default -> false;
+            };
+        }
     }
 }
