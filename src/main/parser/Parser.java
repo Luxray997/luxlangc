@@ -469,12 +469,11 @@ public class Parser {
 
         increment();
         return switch (currentToken.kind()) {
-            case LITERAL_INTEGER -> new IntegerLiteral(currentToken.lexeme());
+            case LITERAL_INTEGER    -> new IntegerLiteral(currentToken.lexeme());
             case LITERAL_FLOATINGPT -> new FloatingPointLiteral(currentToken.lexeme());
-            case TRUE -> new KnownLiteral(KnownLiteral.Value.TRUE);
-            case FALSE -> new KnownLiteral(KnownLiteral.Value.FALSE);
-            case NULL -> new KnownLiteral(KnownLiteral.Value.NULL);
-            case LEFT_PAREN -> {
+            case TRUE               -> new BooleanLiteral(BooleanLiteral.Value.TRUE);
+            case FALSE              -> new BooleanLiteral(BooleanLiteral.Value.FALSE);
+            case LEFT_PAREN         -> {
                 Expression result = parseExpression();
 
                 expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
@@ -482,7 +481,7 @@ public class Parser {
 
                 yield result;
             }
-            default -> throw new ParsingError("Could not parse expression", currentToken);
+            default                 -> throw new ParsingError("Could not parse expression", currentToken);
         };
     }
 

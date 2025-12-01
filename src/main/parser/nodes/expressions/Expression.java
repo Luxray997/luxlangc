@@ -1,10 +1,10 @@
 package main.parser.nodes.expressions;
 
-public sealed interface Expression permits BinaryOperation,
-                                           FloatingPointLiteral,
-                                           FunctionCall,
-                                           IntegerLiteral,
-                                           KnownLiteral,
+public sealed interface Expression permits FunctionCall,
+                                           BinaryOperation,
                                            UnaryOperation,
-                                           VariableExpression
+                                           VariableExpression,
+                                           FloatingPointLiteral,
+                                           IntegerLiteral,
+                                           BooleanLiteral
 { }

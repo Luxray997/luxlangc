@@ -27,7 +27,6 @@ public enum TokenKind {
     LITERAL_FLOATINGPT(null),
     TRUE("true"),
     FALSE("false"),
-    NULL("null"),
     // Operators
     ADD("+"),
     SUB("-"),
@@ -96,7 +95,6 @@ public enum TokenKind {
             case "return" -> RETURN;
             case "true"   -> TRUE;
             case "false"  -> FALSE;
-            case "null"   -> NULL;
             default       -> IDENTIFIER;
         };
     }

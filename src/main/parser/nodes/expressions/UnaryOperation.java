@@ -1,7 +1,7 @@
 package main.parser.nodes.expressions;
 
 public record UnaryOperation(
-    UnaryOperation.Type type,
+    UnaryOperation.Type operation,
     Expression operand
 ) implements Expression {
     public enum Type {
