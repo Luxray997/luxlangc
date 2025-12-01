@@ -19,6 +19,7 @@ public class Scope {
         this.variableSymbols = new HashMap<>();
     }
 
+    // Assumes hasVariable was called and resulted in true
     public VariableSymbol getVariable(String variableName) {
         VariableSymbol variable = variableSymbols.get(variableName);
         if (variable == null) {
@@ -27,6 +28,7 @@ public class Scope {
         return variable;
     }
 
+    // Assumes hasFunction was called and resulted in true
     public FunctionSymbol getFunction(String functionName) {
         FunctionSymbol function = functionSymbols.get(functionName);
         if (function == null) {
