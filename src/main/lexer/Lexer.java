@@ -2,8 +2,13 @@ package main.lexer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class Lexer {
+    private static final Pattern NUMBER_LITERAL_PATTERN = Pattern.compile(
+        "^(?:\\d*\\.\\d+[dDfF]?|\\d+(?:[dDfF]|[uU][lLsSbB]?|[lLsSbB])?)"
+    );
+
     private final String source;
     private final List<Token> tokens;
 
@@ -37,7 +42,7 @@ public class Lexer {
                 continue;
             }
 
-            if (Character.isDigit(currChar)) {
+            if (Character.isDigit(currChar) || currChar == '.') {
                 addNumberLiteral();
                 continue;
             }
@@ -65,16 +70,31 @@ public class Lexer {
     }
 
     private void addNumberLiteral() {
-        char currChar;
         final int startLine = line;
         final int startColumn = column;
         final int startIndex = i;
-        do {
+
+        var matcher = NUMBER_LITERAL_PATTERN.matcher(source);
+        matcher.region(startIndex, source.length());
+        if (!matcher.lookingAt()) {
+            throw new IllegalStateException("Number literal regex pattern didn't match number literal");
+        }
+
+        String lexeme = source.substring(startIndex, matcher.end());
+
+        int literalLength = lexeme.length();
+        for (int j = 0; j < literalLength; j++) {
             increment();
-            currChar = peekCurrentOrNull();
-        } while (Character.isDigit(currChar) || currChar == '.');
-        String lexeme = source.substring(startIndex, i);
-        TokenKind kind = lexeme.contains(".") ? TokenKind.LITERAL_FLOATINGPT : TokenKind.LITERAL_INTEGER;
+        }
+
+        boolean isFloat = lexeme.contains(".") ||
+            switch (lexeme.charAt(literalLength - 1)) {
+                case 'D', 'd', 'F', 'f' -> true;
+                default -> false;
+            };
+
+        TokenKind kind = isFloat ? TokenKind.LITERAL_FLOATINGPT : TokenKind.LITERAL_INTEGER;
+
         tokens.add(new Token(kind, lexeme, startLine, startColumn));
     }
 
@@ -107,9 +127,9 @@ public class Lexer {
     }
 
     private void increment() {
-        char next = peekCurrentOrNull();
+        char previous = peekCurrentOrNull();
         i++;
-        if (next == '\n') {
+        if (previous == '\n') {
             line++;
             column = 1;
         } else {
