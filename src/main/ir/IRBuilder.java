@@ -1,14 +1,14 @@
 package main.ir;
 
+import main.analysis.nodes.AnalyzedFunctionDeclaration;
+import main.analysis.nodes.AnalyzedProgram;
+import main.analysis.nodes.expressions.AnalyzedExpression;
+import main.analysis.nodes.statements.*;
 import main.ir.instructions.*;
 import main.ir.values.*;
-import main.parser.nodes.FunctionDeclaration;
-import main.parser.nodes.Parameter;
-import main.parser.nodes.Program;
 import main.parser.nodes.Type;
-import main.parser.nodes.expressions.*;
-import main.parser.nodes.expressions.FunctionCall;
-import main.parser.nodes.statements.*;
+import main.analysis.nodes.expressions.*;
+import main.analysis.nodes.statements.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,13 +18,13 @@ import static java.lang.Long.parseLong;
 import static main.ir.instructions.Compare.ComparisonType.*;
 
 public class IRBuilder {
-    private final Program program;
+    private final AnalyzedProgram program;
     private IRFunction currentFunction;
     private int nextBlockId;
     private int nextLocalId;
     private int nextTemporaryId;
 
-    public IRBuilder(Program program) {
+    public IRBuilder(AnalyzedProgram program) {
         this.program = program;
     }
 
@@ -37,11 +37,11 @@ public class IRBuilder {
         return new IRModule(irFunctions);
     }
 
-    private void buildFunction(FunctionDeclaration function) {
+    private void buildFunction(AnalyzedFunctionDeclaration function) {
         String name = function.name();
         Type returnType = function.returnType();
         List<Type> parameterTypes = new ArrayList<>();
-        List<IRLocal> locals = new ArrayList<>();
+        List<IRLocal> locals = new ArrayList<>(); // TODO: Replace locals from analysis
         List<BasicBlock> basicBlocks = new ArrayList<>();
         currentFunction = new IRFunction(name, returnType, parameterTypes, locals, basicBlocks);
         nextBlockId = 0;
@@ -57,7 +57,7 @@ public class IRBuilder {
         lastBlockInFunction.setTerminator(new FunctionReturn(null));
     }
 
-    private BasicBlock buildCodeBlock(CodeBlock codeBlock, BasicBlock precedingBlock) {
+    private BasicBlock buildCodeBlock(AnalyzedCodeBlock codeBlock, BasicBlock precedingBlock) {
         BasicBlock lastBlock = precedingBlock;
         for (var statement : codeBlock.statements()) {
             lastBlock = buildStatement(statement, lastBlock);
@@ -65,77 +65,60 @@ public class IRBuilder {
         return lastBlock;
     }
 
-    private BasicBlock buildStatement(Statement statement, BasicBlock precedingBlock) {
+    private BasicBlock buildStatement(AnalyzedStatement statement, BasicBlock precedingBlock) {
         return switch (statement) {
-            case CodeBlock           nestedCodeBlock     -> buildCodeBlock(nestedCodeBlock, precedingBlock);
-            case IfStatement         ifStatement         -> buildIfStatement(ifStatement, precedingBlock);
-            case WhileStatement      whileStatement      -> buildWhileStatement(whileStatement, precedingBlock);
-            case DoWhileStatement    doWhileStatement    -> buildDoWhileStatement(doWhileStatement, precedingBlock);
-            case ForStatement        forStatement        -> buildForStatement(forStatement, precedingBlock);
-            case ReturnStatement     returnStatement     -> buildReturnStatement(returnStatement, precedingBlock);
-            case VariableDeclaration variableDeclaration -> buildVariableDeclaration(variableDeclaration, precedingBlock);
-            case Assignment          assignment          -> buildAssignment(assignment, precedingBlock);
+            case AnalyzedCodeBlock           nestedCodeBlock     -> buildCodeBlock(nestedCodeBlock, precedingBlock);
+            case AnalyzedIfStatement         ifStatement         -> buildIfStatement(ifStatement, precedingBlock);
+            case AnalyzedWhileStatement      whileStatement      -> buildWhileStatement(whileStatement, precedingBlock);
+            case AnalyzedDoWhileStatement    doWhileStatement    -> buildDoWhileStatement(doWhileStatement, precedingBlock);
+            case AnalyzedForStatement        forStatement        -> buildForStatement(forStatement, precedingBlock);
+            case AnalyzedReturnStatement     returnStatement     -> buildReturnStatement(returnStatement, precedingBlock);
+            case AnalyzedVariableDeclaration variableDeclaration -> buildVariableDeclaration(variableDeclaration, precedingBlock);
+            case AnalyzedAssignment          assignment          -> buildAssignment(assignment, precedingBlock);
         };
     }
 
-    private BasicBlock buildAssignment(Assignment assignment, BasicBlock precedingBlock) {
+    private BasicBlock buildAssignment(AnalyzedAssignment assignment, BasicBlock precedingBlock) {
         IRValue value = buildExpression(assignment.value(), precedingBlock);
         int localId = getLocal(assignment.variableName()).index();
         precedingBlock.instructions().add(new StoreToLocal(localId, value));
         return precedingBlock;
     }
 
-    private IRValue buildExpression(Expression value, BasicBlock precedingBlock) {
+    private IRValue buildExpression(AnalyzedExpression value, BasicBlock precedingBlock) {
         return switch (value) {
-            case FunctionCall         functionCall         -> buildFunctionCall(functionCall, precedingBlock);
-            case BinaryOperation      binaryOperation      -> buildBinaryOperation(binaryOperation, precedingBlock);
-            case UnaryOperation       unaryOperation       -> buildUnaryOperation(unaryOperation, precedingBlock);
-            case VariableExpression   variableExpression   -> buildVariableExpression(variableExpression, precedingBlock);
-            case FloatingPointLiteral floatingPointLiteral -> buildFloatingPointLiteral(floatingPointLiteral, precedingBlock);
-            case IntegerLiteral       integerLiteral       -> buildIntegerLiteral(integerLiteral, precedingBlock);
-            case BooleanLiteral       booleanLiteral       -> buildBooleanLiteral(booleanLiteral, precedingBlock);
+            case AnalyzedFunctionCall         functionCall         -> buildFunctionCall(functionCall, precedingBlock);
+            case AnalyzedBinaryOperation      binaryOperation      -> buildBinaryOperation(binaryOperation, precedingBlock);
+            case AnalyzedUnaryOperation       unaryOperation       -> buildUnaryOperation(unaryOperation, precedingBlock);
+            case AnalyzedVariableExpression   variableExpression   -> buildVariableExpression(variableExpression, precedingBlock);
+            case AnalyzedFloatingPointLiteral floatingPointLiteral -> FloatingPointConstant.from(floatingPointLiteral);
+            case AnalyzedIntegerLiteral       integerLiteral       -> IntegerConstant.from(integerLiteral);
+            case AnalyzedBooleanLiteral       booleanLiteral       -> BooleanConstant.from(booleanLiteral);
         };
     }
 
-    private IRValue buildBooleanLiteral(BooleanLiteral booleanLiteral, BasicBlock precedingBlock) {
-        boolean value = booleanLiteral.value() == BooleanLiteral.Value.TRUE;
-        return new BooleanConstant(Type.BOOL, value);
-    }
-
-    private IRValue buildIntegerLiteral(IntegerLiteral integerLiteral, BasicBlock precedingBlock) {
-        Type type = Type.INT; //integerLiteral.type(); // TODO: support for sized literals
-        long value = parseLong(integerLiteral.value());
-        return new IntegerConstant(type, value);
-    }
-
-    private IRValue buildFloatingPointLiteral(FloatingPointLiteral floatingPointLiteral, BasicBlock precedingBlock) {
-        Type type = Type.DOUBLE; // floatingPointLiteral.type();
-        double value = parseDouble(floatingPointLiteral.value());
-        return new FloatingPointConstant(type, value);
-    }
-
-    private IRValue buildVariableExpression(VariableExpression variableExpression, BasicBlock precedingBlock) {
+    private IRValue buildVariableExpression(AnalyzedVariableExpression variableExpression, BasicBlock precedingBlock) {
         IRLocal local = getLocal(variableExpression.name());
         return new LocalPointer(local.type(), local.index());
     }
 
-    private IRValue buildUnaryOperation(UnaryOperation unaryOperation, BasicBlock precedingBlock) {
+    private IRValue buildUnaryOperation(AnalyzedUnaryOperation unaryOperation, BasicBlock precedingBlock) {
         IRValue operand = buildExpression(unaryOperation.operand(), precedingBlock);
-        //Type resultType = unaryOperation.resultType(); // TODO: type tracking from analysis
-        Temporary destination = allocateTemporary(/*resultType*/Type.VOID);
+        Type resultType = unaryOperation.resultType();
+        Temporary destination = allocateTemporary(resultType);
         RegularInstruction instruction = switch (unaryOperation.operation()) {
-            case LOGICAL_NOT -> new Xor(destination, operand, new IntegerConstant(/*resultType*/Type.INT, 1));
+            case LOGICAL_NOT -> new Xor(destination, operand, new IntegerConstant(resultType, 1));
             case BITWISE_NOT -> new Not(destination, operand);
-            case NEGATION -> new Subtract(destination, new IntegerConstant(/*resultType*/Type.INT, 0), operand);
+            case NEGATION -> new Negate(destination, operand);
         };
         precedingBlock.instructions().add(instruction);
         return destination;
     }
 
-    private IRValue buildBinaryOperation(BinaryOperation binaryOperation, BasicBlock precedingBlock) {
+    private IRValue buildBinaryOperation(AnalyzedBinaryOperation binaryOperation, BasicBlock precedingBlock) {
         IRValue left = buildExpression(binaryOperation.left(), precedingBlock);
         IRValue right = buildExpression(binaryOperation.right(), precedingBlock);
-        Temporary destination = allocateTemporary(Type.VOID/*binaryOperation.resultType()*/);
+        Temporary destination = allocateTemporary(binaryOperation.resultType());
         RegularInstruction instruction = switch (binaryOperation.operation()) {
             case ADD -> new Add(destination, left, right);
             case SUB -> new Subtract(destination, left, right);
@@ -158,7 +141,7 @@ public class IRBuilder {
         return destination;
     }
 
-    private IRValue buildFunctionCall(FunctionCall functionCall, BasicBlock precedingBlock) {
+    private IRValue buildFunctionCall(AnalyzedFunctionCall functionCall, BasicBlock precedingBlock) {
         List<IRValue> argumentValues = functionCall.arguments().stream()
                 .map(argument -> buildExpression(argument, precedingBlock))
                 .toList();
@@ -168,7 +151,7 @@ public class IRBuilder {
     }
 
 
-    private BasicBlock buildVariableDeclaration(VariableDeclaration variableDeclaration, BasicBlock precedingBlock) {
+    private BasicBlock buildVariableDeclaration(AnalyzedVariableDeclaration variableDeclaration, BasicBlock precedingBlock) {
         int id = addLocal(variableDeclaration.name(), variableDeclaration.type());
         if (variableDeclaration.initialValue().isPresent()) {
             IRValue initialValue = buildExpression(variableDeclaration.initialValue().get(), precedingBlock);
@@ -177,7 +160,7 @@ public class IRBuilder {
         return precedingBlock;
     }
 
-    private BasicBlock buildReturnStatement(ReturnStatement returnStatement, BasicBlock precedingBlock) {
+    private BasicBlock buildReturnStatement(AnalyzedReturnStatement returnStatement, BasicBlock precedingBlock) {
         IRValue returnValue = null;
         if (returnStatement.value().isPresent()) {
             returnValue = buildExpression(returnStatement.value().get(), precedingBlock);
@@ -187,11 +170,11 @@ public class IRBuilder {
     }
 
 
-    private BasicBlock buildForStatement(ForStatement forStatement, BasicBlock precedingBlock) {
+    private BasicBlock buildForStatement(AnalyzedForStatement forStatement, BasicBlock precedingBlock) {
         if (forStatement.initializer().isPresent()) {
             switch (forStatement.initializer().get()) {
-                case VariableDeclaration initVariable -> buildVariableDeclaration(initVariable, precedingBlock);
-                case Assignment          assignment   -> buildAssignment(assignment, precedingBlock);
+                case AnalyzedVariableDeclaration initVariable -> buildVariableDeclaration(initVariable, precedingBlock);
+                case AnalyzedAssignment          assignment   -> buildAssignment(assignment, precedingBlock);
             }
         }
 
@@ -221,7 +204,7 @@ public class IRBuilder {
         return blockAfterLoop;
     }
 
-    private BasicBlock buildDoWhileStatement(DoWhileStatement doWhileStatement, BasicBlock precedingBlock) {
+    private BasicBlock buildDoWhileStatement(AnalyzedDoWhileStatement doWhileStatement, BasicBlock precedingBlock) {
         BasicBlock condition = createEmptyBasicBlock("do_while_condition");
         IRValue conditionValue = buildExpression(doWhileStatement.condition(), condition);
 
@@ -237,7 +220,7 @@ public class IRBuilder {
         return blockAfterLoop;
     }
 
-    private BasicBlock buildWhileStatement(WhileStatement whileStatement, BasicBlock precedingBlock) {
+    private BasicBlock buildWhileStatement(AnalyzedWhileStatement whileStatement, BasicBlock precedingBlock) {
         BasicBlock condition = createEmptyBasicBlock("while_condition");
         IRValue conditionValue = buildExpression(whileStatement.condition(), condition);
 
@@ -253,7 +236,7 @@ public class IRBuilder {
         return blockAfterLoop;
     }
 
-    private BasicBlock buildIfStatement(IfStatement ifStatement, BasicBlock precedingBlock) {
+    private BasicBlock buildIfStatement(AnalyzedIfStatement ifStatement, BasicBlock precedingBlock) {
         IRValue conditionValue = buildExpression(ifStatement.condition(), precedingBlock);
         BasicBlock firstBlockInBody = createEmptyBasicBlock("if_body");
         BasicBlock mergeBlock = createEmptyBasicBlock("merge");
