@@ -4,10 +4,10 @@ import main.ir.values.IRValue;
 import main.ir.values.Temporary;
 
 public record Compare(
-    ComparisonType comparisonType,
-    Temporary destination,
-    IRValue left,
-    IRValue right
+        Temporary destination,
+        IRValue left,
+        ComparisonType comparisonType,
+        IRValue right
 ) implements RegularInstruction {
     public enum ComparisonType {
         LESS,

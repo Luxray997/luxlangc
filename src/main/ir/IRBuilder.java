@@ -9,6 +9,7 @@ import main.ir.values.*;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.Type;
 import main.analysis.nodes.expressions.*;
+import main.parser.nodes.expressions.BinaryOperation;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,21 +79,21 @@ public class IRBuilder {
     }
 
     private BasicBlock buildAssignment(AnalyzedAssignment assignment, BasicBlock precedingBlock) {
-        IRValue value = buildExpression(assignment.value(), precedingBlock);
+        var valueResult = buildExpression(assignment.value(), precedingBlock);
         int localId = getLocal(assignment.variableName()).index();
-        precedingBlock.instructions().add(new StoreToLocal(localId, value));
-        return precedingBlock;
+        valueResult.lastBlock().instructions().add(new StoreToLocal(localId, valueResult.value()));
+        return valueResult.lastBlock();
     }
 
-    private IRValue buildExpression(AnalyzedExpression value, BasicBlock precedingBlock) {
+    private BuiltExpressionResult buildExpression(AnalyzedExpression value, BasicBlock precedingBlock) {
         return switch (value) {
-            case AnalyzedFunctionCall         functionCall         -> buildFunctionCall(functionCall, precedingBlock);
             case AnalyzedBinaryOperation      binaryOperation      -> buildBinaryOperation(binaryOperation, precedingBlock);
-            case AnalyzedUnaryOperation       unaryOperation       -> buildUnaryOperation(unaryOperation, precedingBlock);
-            case AnalyzedVariableExpression   variableExpression   -> buildVariableExpression(variableExpression);
-            case AnalyzedFloatingPointLiteral floatingPointLiteral -> FloatingPointConstant.from(floatingPointLiteral);
-            case AnalyzedIntegerLiteral       integerLiteral       -> IntegerConstant.from(integerLiteral);
-            case AnalyzedBooleanLiteral       booleanLiteral       -> BooleanConstant.from(booleanLiteral);
+            case AnalyzedFunctionCall         functionCall         -> new BuiltExpressionResult(buildFunctionCall(functionCall, precedingBlock), precedingBlock);
+            case AnalyzedUnaryOperation       unaryOperation       -> new BuiltExpressionResult(buildUnaryOperation(unaryOperation, precedingBlock), precedingBlock);
+            case AnalyzedVariableExpression   variableExpression   -> new BuiltExpressionResult(buildVariableExpression(variableExpression), precedingBlock);
+            case AnalyzedFloatingPointLiteral floatingPointLiteral -> new BuiltExpressionResult(FloatingPointConstant.from(floatingPointLiteral), precedingBlock);
+            case AnalyzedIntegerLiteral       integerLiteral       -> new BuiltExpressionResult(IntegerConstant.from(integerLiteral), precedingBlock);
+            case AnalyzedBooleanLiteral       booleanLiteral       -> new BuiltExpressionResult(BooleanConstant.from(booleanLiteral), precedingBlock);
         };
     }
 
@@ -102,21 +103,29 @@ public class IRBuilder {
     }
 
     private IRValue buildUnaryOperation(AnalyzedUnaryOperation unaryOperation, BasicBlock precedingBlock) {
-        IRValue operand = buildExpression(unaryOperation.operand(), precedingBlock);
+        var operandResult = buildExpression(unaryOperation.operand(), precedingBlock);
         Type resultType = unaryOperation.resultType();
         Temporary destination = allocateTemporary(resultType);
         RegularInstruction instruction = switch (unaryOperation.operation()) {
-            case LOGICAL_NOT -> new Xor(destination, operand, new IntegerConstant(resultType, 1));
-            case BITWISE_NOT -> new Not(destination, operand);
-            case NEGATION -> new Negate(destination, operand);
+            case LOGICAL_NOT -> new Xor(destination, operandResult.value(), new IntegerConstant(resultType, 1));
+            case BITWISE_NOT -> new Not(destination, operandResult.value());
+            case NEGATION    -> new Negate(destination, operandResult.value());
         };
-        precedingBlock.instructions().add(instruction);
+        operandResult.lastBlock().instructions().add(instruction);
         return destination;
     }
 
-    private IRValue buildBinaryOperation(AnalyzedBinaryOperation binaryOperation, BasicBlock precedingBlock) {
-        IRValue left = buildExpression(binaryOperation.left(), precedingBlock);
-        IRValue right = buildExpression(binaryOperation.right(), precedingBlock);
+    private BuiltExpressionResult buildBinaryOperation(AnalyzedBinaryOperation binaryOperation, BasicBlock precedingBlock) {
+        if (binaryOperation.operation() == BinaryOperation.Type.LOGICAL_OR) {
+            return buildLogicalOr(binaryOperation, precedingBlock);
+        }
+        if (binaryOperation.operation() == BinaryOperation.Type.LOGICAL_AND) {
+            return buildLogicalAnd(binaryOperation, precedingBlock);
+        }
+        var leftResult = buildExpression(binaryOperation.left(), precedingBlock);
+        IRValue left = leftResult.value();
+        var rightResult = buildExpression(binaryOperation.right(), leftResult.lastBlock());
+        IRValue right = rightResult.value();
         Temporary destination = allocateTemporary(binaryOperation.resultType());
         RegularInstruction instruction = switch (binaryOperation.operation()) {
             case ADD -> new Add(destination, left, right);
@@ -124,88 +133,147 @@ public class IRBuilder {
             case MULT -> new Multiply(destination, left, right);
             case DIV -> new Divide(destination, left, right);
             case MOD -> new Modulo(destination, left, right);
-            case LOGICAL_AND -> new And(destination, left, right); // TODO: implement short-circuiting
-            case LOGICAL_OR -> new Or(destination, left, right);
             case BITWISE_AND -> new And(destination, left, right);
             case BITWISE_OR -> new Or(destination, left, right);
             case BITWISE_XOR -> new Xor(destination, left, right);
-            case EQUAL -> new Compare(EQUAL, destination, left, right);
-            case NOT_EQUAL -> new Compare(NOT_EQUAL, destination, left, right);
-            case LESS -> new Compare(LESS, destination, left, right);
-            case LESS_EQUAL -> new Compare(LESS_EQUAL, destination, left, right);
-            case GREATER -> new Compare(GREATER, destination, left, right);
-            case GREATER_EQUAL -> new Compare(GREATER_EQUAL, destination, left, right);
+            case EQUAL -> new Compare(destination, left, EQUAL, right);
+            case NOT_EQUAL -> new Compare(destination, left, NOT_EQUAL, right);
+            case LESS -> new Compare(destination, left, LESS, right);
+            case LESS_EQUAL -> new Compare(destination, left, LESS_EQUAL, right);
+            case GREATER -> new Compare(destination, left, GREATER, right);
+            case GREATER_EQUAL -> new Compare(destination, left, GREATER_EQUAL, right);
+            case LOGICAL_AND, LOGICAL_OR -> throw new IllegalStateException("Building logical expression as binary operation");
         };
-        precedingBlock.instructions().add(instruction);
-        return destination;
+        rightResult.lastBlock().instructions().add(instruction);
+        return new BuiltExpressionResult(destination, rightResult.lastBlock());
+    }
+
+    private BuiltExpressionResult buildLogicalAnd(AnalyzedBinaryOperation andOperation, BasicBlock precedingBlock) {
+        var leftResult = buildExpression(andOperation.left(), precedingBlock);
+
+        BasicBlock evalRightBlock = createEmptyBasicBlock("eval_right");
+        BasicBlock exitBlock = createEmptyBasicBlock("exit");
+
+        leftResult.lastBlock().setTerminator(new ConditionalBranch(leftResult.value(), evalRightBlock, exitBlock));
+
+        var rightResult = buildExpression(andOperation.right(), evalRightBlock);
+
+        rightResult.lastBlock().setTerminator(new UnconditionalBranch(exitBlock));
+
+        Temporary destination = allocateTemporary(Type.BOOL);
+        exitBlock.instructions().add(
+            new Phi(
+                destination,
+                leftResult.lastBlock(), leftResult.value(),
+                rightResult.lastBlock(), rightResult.value()
+            )
+        );
+
+        return new BuiltExpressionResult(destination, exitBlock);
+    }
+
+    private BuiltExpressionResult buildLogicalOr(AnalyzedBinaryOperation orOperation, BasicBlock precedingBlock) {
+        var leftResult = buildExpression(orOperation.left(), precedingBlock);
+
+        BasicBlock evalRightBlock = createEmptyBasicBlock("eval_right");
+        BasicBlock exitBlock = createEmptyBasicBlock("exit");
+
+        leftResult.lastBlock().setTerminator(new ConditionalBranch(leftResult.value(), exitBlock, evalRightBlock));
+
+        var rightResult = buildExpression(orOperation.right(), evalRightBlock);
+
+        rightResult.lastBlock().setTerminator(new UnconditionalBranch(exitBlock));
+
+        Temporary destination = allocateTemporary(Type.BOOL);
+        exitBlock.instructions().add(
+            new Phi(
+                destination,
+                leftResult.lastBlock(), leftResult.value(),
+                rightResult.lastBlock(), rightResult.value()
+            )
+        );
+
+        return new BuiltExpressionResult(destination, exitBlock);
     }
 
     private IRValue buildFunctionCall(AnalyzedFunctionCall functionCall, BasicBlock precedingBlock) {
-        List<IRValue> argumentValues = functionCall.arguments().stream()
-                .map(argument -> buildExpression(argument, precedingBlock))
-                .toList();
+        BasicBlock lastBlock = precedingBlock;
+        List<IRValue> argumentValues = new ArrayList<>();
+        for (var argument : functionCall.arguments()) {
+            var argumentResult = buildExpression(argument, lastBlock);
+            lastBlock = argumentResult.lastBlock();
+            argumentValues.add(argumentResult.value());
+        }
         Temporary destination = allocateTemporary(functionCall.resultType());
-        precedingBlock.instructions().add(new FunctionCallInstruction(functionCall.name(), destination, argumentValues));
+        lastBlock.instructions().add(new FunctionCallInstruction(functionCall.name(), destination, argumentValues));
         return destination;
     }
 
 
     private BasicBlock buildVariableDeclaration(AnalyzedVariableDeclaration variableDeclaration, BasicBlock precedingBlock) {
         int id = getLocal(variableDeclaration.name()).index();
-        if (variableDeclaration.initialValue().isPresent()) {
-            IRValue initialValue = buildExpression(variableDeclaration.initialValue().get(), precedingBlock);
-            precedingBlock.instructions().add(new StoreToLocal(id, initialValue));
+        if (variableDeclaration.initialValue().isEmpty()) {
+            return precedingBlock;
         }
-        return precedingBlock;
+
+        var initialValueResult = buildExpression(variableDeclaration.initialValue().get(), precedingBlock);
+        var lastBlock = initialValueResult.lastBlock();
+        var initialValue = initialValueResult.value();
+        lastBlock.instructions().add(new StoreToLocal(id, initialValue));
+        return lastBlock;
     }
 
     private BasicBlock buildReturnStatement(AnalyzedReturnStatement returnStatement, BasicBlock precedingBlock) {
         IRValue returnValue = null;
+        BasicBlock lastBlock = precedingBlock;
         if (returnStatement.value().isPresent()) {
-            returnValue = buildExpression(returnStatement.value().get(), precedingBlock);
+            var returnValueResult = buildExpression(returnStatement.value().get(), precedingBlock);
+            returnValue = returnValueResult.value();
+            lastBlock = returnValueResult.lastBlock();
         }
-        precedingBlock.setTerminator(new FunctionReturn(returnValue));
-        return precedingBlock;
+        lastBlock.setTerminator(new FunctionReturn(returnValue));
+        return lastBlock;
     }
 
 
     private BasicBlock buildForStatement(AnalyzedForStatement forStatement, BasicBlock precedingBlock) {
+        BasicBlock lastBlockBeforeEntry = precedingBlock;
         if (forStatement.initializer().isPresent()) {
-            switch (forStatement.initializer().get()) {
+            lastBlockBeforeEntry = switch (forStatement.initializer().get()) {
                 case AnalyzedVariableDeclaration initVariable -> buildVariableDeclaration(initVariable, precedingBlock);
                 case AnalyzedAssignment          assignment   -> buildAssignment(assignment, precedingBlock);
-            }
+            };
         }
 
         BasicBlock firstBlockInBody = createEmptyBasicBlock("for_body");
         BasicBlock lastBlockInBody = buildStatement(forStatement.body(), firstBlockInBody);
 
         if (forStatement.update().isPresent()) {
-            buildAssignment(forStatement.update().get(), lastBlockInBody);
+            lastBlockInBody = buildAssignment(forStatement.update().get(), lastBlockInBody);
         }
 
         BasicBlock blockAfterLoop = createEmptyBasicBlock("for_exit");
 
         BasicBlock entry = firstBlockInBody;
 
-
         if (forStatement.condition().isPresent()) {
             BasicBlock condition = createEmptyBasicBlock("for_condition");
-            IRValue conditionValue = buildExpression(forStatement.condition().get(), condition);
+            var conditionResult = buildExpression(forStatement.condition().get(), condition);
 
             entry = condition;
 
-            condition.setTerminator(new ConditionalBranch(conditionValue, firstBlockInBody, blockAfterLoop));
+            conditionResult.lastBlock().setTerminator(new ConditionalBranch(conditionResult.value(), firstBlockInBody, blockAfterLoop));
         }
 
-        precedingBlock.setTerminator(new UnconditionalBranch(entry));
+        lastBlockBeforeEntry.setTerminator(new UnconditionalBranch(entry));
         lastBlockInBody.setTerminator(new UnconditionalBranch(entry));
         return blockAfterLoop;
     }
 
     private BasicBlock buildDoWhileStatement(AnalyzedDoWhileStatement doWhileStatement, BasicBlock precedingBlock) {
-        BasicBlock condition = createEmptyBasicBlock("do_while_condition");
-        IRValue conditionValue = buildExpression(doWhileStatement.condition(), condition);
+        BasicBlock firstBlockInCondition = createEmptyBasicBlock("do_while_condition");
+        var conditionResult = buildExpression(doWhileStatement.condition(), firstBlockInCondition);
+        BasicBlock lastBlockInCondition = conditionResult.lastBlock();
 
         BasicBlock firstBlockInBody = createEmptyBasicBlock("do_while_body");
         BasicBlock lastBlockInBody = buildStatement(doWhileStatement.body(), firstBlockInBody);
@@ -213,30 +281,33 @@ public class IRBuilder {
         BasicBlock blockAfterLoop = createEmptyBasicBlock("do_while_exit");
 
         precedingBlock.setTerminator(new UnconditionalBranch(firstBlockInBody));
-        lastBlockInBody.setTerminator(new UnconditionalBranch(condition));
-        condition.setTerminator(new ConditionalBranch(conditionValue, firstBlockInBody, blockAfterLoop));
+        lastBlockInBody.setTerminator(new UnconditionalBranch(firstBlockInCondition));
+        lastBlockInCondition.setTerminator(new ConditionalBranch(conditionResult.value(), firstBlockInBody, blockAfterLoop));
 
         return blockAfterLoop;
     }
 
     private BasicBlock buildWhileStatement(AnalyzedWhileStatement whileStatement, BasicBlock precedingBlock) {
-        BasicBlock condition = createEmptyBasicBlock("while_condition");
-        IRValue conditionValue = buildExpression(whileStatement.condition(), condition);
+        BasicBlock firstBlockInCondition = createEmptyBasicBlock("while_condition");
+        var conditionResult = buildExpression(whileStatement.condition(), firstBlockInCondition);
+        BasicBlock lastBlockInCondition = conditionResult.lastBlock();
 
         BasicBlock firstBlockInBody = createEmptyBasicBlock("while_body");
         BasicBlock lastBlockInBody = buildStatement(whileStatement.body(), firstBlockInBody);
 
         BasicBlock blockAfterLoop = createEmptyBasicBlock("while_exit");
 
-        precedingBlock.setTerminator(new UnconditionalBranch(condition));
-        lastBlockInBody.setTerminator(new UnconditionalBranch(condition));
-        condition.setTerminator(new ConditionalBranch(conditionValue, firstBlockInBody, blockAfterLoop));
+        precedingBlock.setTerminator(new UnconditionalBranch(firstBlockInCondition));
+        lastBlockInBody.setTerminator(new UnconditionalBranch(firstBlockInCondition));
+        lastBlockInCondition.setTerminator(new ConditionalBranch(conditionResult.value(), firstBlockInBody, blockAfterLoop));
 
         return blockAfterLoop;
     }
 
     private BasicBlock buildIfStatement(AnalyzedIfStatement ifStatement, BasicBlock precedingBlock) {
-        IRValue conditionValue = buildExpression(ifStatement.condition(), precedingBlock);
+        var conditionResult = buildExpression(ifStatement.condition(), precedingBlock);
+        BasicBlock lastBlockInCondition = conditionResult.lastBlock();
+
         BasicBlock firstBlockInBody = createEmptyBasicBlock("if_body");
         BasicBlock mergeBlock = createEmptyBasicBlock("merge");
 
@@ -251,7 +322,7 @@ public class IRBuilder {
             lastBlockInElseBody.setTerminator(new UnconditionalBranch(mergeBlock));
         }
 
-        precedingBlock.setTerminator(new ConditionalBranch(conditionValue, firstBlockInBody, notTakenTarget));
+        lastBlockInCondition.setTerminator(new ConditionalBranch(conditionResult.value(), firstBlockInBody, notTakenTarget));
         lastBlockInBody.setTerminator(new UnconditionalBranch(mergeBlock));
 
         return mergeBlock;
