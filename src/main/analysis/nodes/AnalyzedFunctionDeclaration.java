@@ -1,7 +1,6 @@
 package main.analysis.nodes;
 
 import main.analysis.LocalVariable;
-import main.analysis.Scope;
 import main.analysis.nodes.statements.AnalyzedCodeBlock;
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Parameter;
@@ -14,7 +13,7 @@ public record AnalyzedFunctionDeclaration(
     String name,
     List<Parameter> parameters,
     AnalyzedCodeBlock body,
-    List<LocalVariable> scope
+    List<LocalVariable> localVariables
 ) {
     public static AnalyzedFunctionDeclaration from(FunctionDeclaration functionDeclaration, AnalyzedCodeBlock body, List<LocalVariable> locals) {
         return new AnalyzedFunctionDeclaration(

@@ -3,12 +3,13 @@ package main.ir;
 import main.parser.nodes.Type;
 
 import java.util.List;
+import java.util.Map;
 
 public record IRFunction(
     String name,
     Type returnType,
     List<Type> parameterTypes,
-    List<IRLocal> locals,
+    Map<String, IRLocal> locals,
     List<BasicBlock> basicBlocks
 ) {
 }

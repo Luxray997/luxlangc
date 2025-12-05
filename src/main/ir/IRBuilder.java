@@ -6,22 +6,22 @@ import main.analysis.nodes.expressions.AnalyzedExpression;
 import main.analysis.nodes.statements.*;
 import main.ir.instructions.*;
 import main.ir.values.*;
+import main.parser.nodes.Parameter;
 import main.parser.nodes.Type;
 import main.analysis.nodes.expressions.*;
-import main.analysis.nodes.statements.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import static java.lang.Double.parseDouble;
-import static java.lang.Long.parseLong;
+import static java.util.function.Function.identity;
 import static main.ir.instructions.Compare.ComparisonType.*;
-
+// TODO: good unit tests
 public class IRBuilder {
     private final AnalyzedProgram program;
     private IRFunction currentFunction;
     private int nextBlockId;
-    private int nextLocalId;
     private int nextTemporaryId;
 
     public IRBuilder(AnalyzedProgram program) {
@@ -40,17 +40,16 @@ public class IRBuilder {
     private void buildFunction(AnalyzedFunctionDeclaration function) {
         String name = function.name();
         Type returnType = function.returnType();
-        List<Type> parameterTypes = new ArrayList<>();
-        List<IRLocal> locals = new ArrayList<>(); // TODO: Replace locals from analysis
+        List<Type> parameterTypes = function.parameters().stream()
+                .map(Parameter::type)
+                .toList();
+        Map<String, IRLocal> locals = function.localVariables().stream()
+                .map(IRLocal::from)
+                .collect(Collectors.toMap(IRLocal::name, identity()));
         List<BasicBlock> basicBlocks = new ArrayList<>();
         currentFunction = new IRFunction(name, returnType, parameterTypes, locals, basicBlocks);
         nextBlockId = 0;
         nextTemporaryId = 0;
-
-        for (var parameter : function.parameters()) {
-            addLocal(parameter.name(), parameter.type());
-            parameterTypes.add(parameter.type());
-        }
 
         var entryBasicBlock = createEmptyBasicBlock("entry");
         BasicBlock lastBlockInFunction = buildCodeBlock(function.body(), entryBasicBlock);
@@ -90,14 +89,14 @@ public class IRBuilder {
             case AnalyzedFunctionCall         functionCall         -> buildFunctionCall(functionCall, precedingBlock);
             case AnalyzedBinaryOperation      binaryOperation      -> buildBinaryOperation(binaryOperation, precedingBlock);
             case AnalyzedUnaryOperation       unaryOperation       -> buildUnaryOperation(unaryOperation, precedingBlock);
-            case AnalyzedVariableExpression   variableExpression   -> buildVariableExpression(variableExpression, precedingBlock);
+            case AnalyzedVariableExpression   variableExpression   -> buildVariableExpression(variableExpression);
             case AnalyzedFloatingPointLiteral floatingPointLiteral -> FloatingPointConstant.from(floatingPointLiteral);
             case AnalyzedIntegerLiteral       integerLiteral       -> IntegerConstant.from(integerLiteral);
             case AnalyzedBooleanLiteral       booleanLiteral       -> BooleanConstant.from(booleanLiteral);
         };
     }
 
-    private IRValue buildVariableExpression(AnalyzedVariableExpression variableExpression, BasicBlock precedingBlock) {
+    private IRValue buildVariableExpression(AnalyzedVariableExpression variableExpression) {
         IRLocal local = getLocal(variableExpression.name());
         return new LocalPointer(local.type(), local.index());
     }
@@ -145,14 +144,14 @@ public class IRBuilder {
         List<IRValue> argumentValues = functionCall.arguments().stream()
                 .map(argument -> buildExpression(argument, precedingBlock))
                 .toList();
-        Temporary destination = allocateTemporary(Type.VOID/*functionCall.returnType()*/);
+        Temporary destination = allocateTemporary(functionCall.resultType());
         precedingBlock.instructions().add(new FunctionCallInstruction(functionCall.name(), destination, argumentValues));
         return destination;
     }
 
 
     private BasicBlock buildVariableDeclaration(AnalyzedVariableDeclaration variableDeclaration, BasicBlock precedingBlock) {
-        int id = addLocal(variableDeclaration.name(), variableDeclaration.type());
+        int id = getLocal(variableDeclaration.name()).index();
         if (variableDeclaration.initialValue().isPresent()) {
             IRValue initialValue = buildExpression(variableDeclaration.initialValue().get(), precedingBlock);
             precedingBlock.instructions().add(new StoreToLocal(id, initialValue));
@@ -265,20 +264,8 @@ public class IRBuilder {
         return block;
     }
 
-    private int addLocal(String name, Type type) {
-        currentFunction.locals().add(new IRLocal(name, type, nextLocalId));
-        return nextLocalId++;
-    }
-
     private IRLocal getLocal(String name) {
-        // Probably should replace with something better like a bimap, but this will work
-        // for now
-        for (var local : currentFunction.locals()) {
-            if (name.equals(local.name())) {
-                return local;
-            }
-        }
-        throw new RuntimeException("This should be unreachable!");
+        return currentFunction.locals().get(name);
     }
 
     private Temporary allocateTemporary(Type type) {
