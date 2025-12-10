@@ -116,10 +116,10 @@ public class IRBuilder {
     }
 
     private BuiltExpressionResult buildBinaryOperation(AnalyzedBinaryOperation binaryOperation, BasicBlock precedingBlock) {
-        if (binaryOperation.operation() == BinaryOperation.Type.LOGICAL_OR) {
+        if (binaryOperation.operation() == BinaryOperation.BinaryOperationType.LOGICAL_OR) {
             return buildLogicalOr(binaryOperation, precedingBlock);
         }
-        if (binaryOperation.operation() == BinaryOperation.Type.LOGICAL_AND) {
+        if (binaryOperation.operation() == BinaryOperation.BinaryOperationType.LOGICAL_AND) {
             return buildLogicalAnd(binaryOperation, precedingBlock);
         }
         var leftResult = buildExpression(binaryOperation.left(), precedingBlock);

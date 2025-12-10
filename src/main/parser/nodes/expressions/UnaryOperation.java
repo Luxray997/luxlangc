@@ -1,10 +1,10 @@
 package main.parser.nodes.expressions;
 
 public record UnaryOperation(
-    UnaryOperation.Type operation,
+    UnaryOperationType operation,
     Expression operand
 ) implements Expression {
-    public enum Type {
+    public enum UnaryOperationType {
         LOGICAL_NOT,
         BITWISE_NOT,
         NEGATION

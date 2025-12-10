@@ -4,7 +4,7 @@ import main.parser.nodes.Type;
 import main.parser.nodes.expressions.UnaryOperation;
 
 public record AnalyzedUnaryOperation(
-    UnaryOperation.Type operation,
+    UnaryOperation.UnaryOperationType operation,
     AnalyzedExpression operand,
     Type resultType
 ) implements AnalyzedExpression { }

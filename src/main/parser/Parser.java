@@ -6,6 +6,8 @@ import main.parser.errors.ParsingError;
 import main.parser.errors.UnexpectedKindError;
 import main.parser.nodes.*;
 import main.parser.nodes.expressions.*;
+import main.parser.nodes.expressions.BinaryOperation.BinaryOperationType;
+import main.parser.nodes.expressions.UnaryOperation.UnaryOperationType;
 import main.parser.nodes.statements.*;
 
 import java.util.ArrayList;
@@ -273,7 +275,7 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseLogicalAnd();
-            result = new BinaryOperation(BinaryOperation.Type.LOGICAL_OR, left, right);
+            result = new BinaryOperation(BinaryOperationType.LOGICAL_OR, left, right);
         }
 
         return result;
@@ -286,7 +288,7 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseBitwiseOr();
-            result = new BinaryOperation(BinaryOperation.Type.LOGICAL_AND, left, right);
+            result = new BinaryOperation(BinaryOperationType.LOGICAL_AND, left, right);
         }
 
         return result;
@@ -299,7 +301,7 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseBitwiseXor();
-            result = new BinaryOperation(BinaryOperation.Type.BITWISE_OR, left, right);
+            result = new BinaryOperation(BinaryOperationType.BITWISE_OR, left, right);
         }
 
         return result;
@@ -312,7 +314,7 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseBitwiseAnd();
-            result = new BinaryOperation(BinaryOperation.Type.BITWISE_XOR, left, right);
+            result = new BinaryOperation(BinaryOperationType.BITWISE_XOR, left, right);
         }
 
         return result;
@@ -325,7 +327,7 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseEquivalence();
-            result = new BinaryOperation(BinaryOperation.Type.BITWISE_AND, left, right);
+            result = new BinaryOperation(BinaryOperationType.BITWISE_AND, left, right);
         }
 
         return result;
@@ -336,10 +338,10 @@ public class Parser {
 
         termLoop:
         while (true) {
-            BinaryOperation.Type type;
+            BinaryOperationType operation;
             switch(currentToken().kind()) {
-                case EQUAL     -> type = BinaryOperation.Type.EQUAL;
-                case NOT_EQUAL -> type = BinaryOperation.Type.NOT_EQUAL;
+                case EQUAL     -> operation = BinaryOperationType.EQUAL;
+                case NOT_EQUAL -> operation = BinaryOperationType.NOT_EQUAL;
                 default -> {
                     break termLoop;
                 }
@@ -348,7 +350,7 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseRelational();
-            result = new BinaryOperation(type, left, right);
+            result = new BinaryOperation(operation, left, right);
         }
 
         return result;
@@ -359,12 +361,12 @@ public class Parser {
 
         termLoop:
         while (true) {
-            BinaryOperation.Type type;
+            BinaryOperationType operation;
             switch (currentToken().kind()) {
-                case LESS          -> type = BinaryOperation.Type.LESS;
-                case LESS_EQUAL    -> type = BinaryOperation.Type.LESS_EQUAL;
-                case GREATER       -> type = BinaryOperation.Type.GREATER;
-                case GREATER_EQUAL -> type = BinaryOperation.Type.GREATER_EQUAL;
+                case LESS          -> operation = BinaryOperationType.LESS;
+                case LESS_EQUAL    -> operation = BinaryOperationType.LESS_EQUAL;
+                case GREATER       -> operation = BinaryOperationType.GREATER;
+                case GREATER_EQUAL -> operation = BinaryOperationType.GREATER_EQUAL;
                 default -> {
                     break termLoop;
                 }
@@ -373,7 +375,7 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseAdditive();
-            result = new BinaryOperation(type, left, right);
+            result = new BinaryOperation(operation, left, right);
         }
 
         return result;
@@ -384,10 +386,10 @@ public class Parser {
 
         termLoop:
         while (true) {
-            BinaryOperation.Type type;
+            BinaryOperationType operation;
             switch (currentToken().kind()) {
-                case ADD -> type = BinaryOperation.Type.ADD;
-                case SUB -> type = BinaryOperation.Type.SUB;
+                case ADD -> operation = BinaryOperationType.ADD;
+                case SUB -> operation = BinaryOperationType.SUB;
                 default -> {
                     break termLoop;
                 }
@@ -396,7 +398,7 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseMultiplicative();
-            result = new BinaryOperation(type, left, right);
+            result = new BinaryOperation(operation, left, right);
         }
 
         return result;
@@ -407,11 +409,11 @@ public class Parser {
 
         termLoop:
         while (true) {
-            BinaryOperation.Type type;
+            BinaryOperationType operation;
             switch (currentToken().kind()) {
-                case MULT -> type = BinaryOperation.Type.MULT;
-                case DIV  -> type = BinaryOperation.Type.DIV;
-                case MOD  -> type = BinaryOperation.Type.MOD;
+                case MULT -> operation = BinaryOperationType.MULT;
+                case DIV  -> operation = BinaryOperationType.DIV;
+                case MOD  -> operation = BinaryOperationType.MOD;
                 default -> {
                     break termLoop;
                 }
@@ -420,18 +422,18 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseUnary();
-            result = new BinaryOperation(type, left, right);
+            result = new BinaryOperation(operation, left, right);
         }
 
         return result;
     }
 
     private Expression parseUnary() {
-        UnaryOperation.Type operation;
+        UnaryOperationType operation;
         switch (currentToken().kind()) {
-            case SUB         -> operation = UnaryOperation.Type.NEGATION;
-            case LOGICAL_NOT -> operation = UnaryOperation.Type.LOGICAL_NOT;
-            case BITWISE_NOT -> operation = UnaryOperation.Type.BITWISE_NOT;
+            case SUB         -> operation = UnaryOperationType.NEGATION;
+            case LOGICAL_NOT -> operation = UnaryOperationType.LOGICAL_NOT;
+            case BITWISE_NOT -> operation = UnaryOperationType.BITWISE_NOT;
             default -> {
                 return parsePrimary();
             }

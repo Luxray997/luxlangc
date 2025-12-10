@@ -115,17 +115,6 @@ public class Analyzer {
         };
     }
 
-    private boolean isValidBinaryOperation(Type leftType, Type rightType, BinaryOperation.Type operation) {
-        // TODO: do a real check
-        if (leftType != rightType) return false;
-        return switch (operation) {
-            case ADD, SUB, MULT, DIV, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL -> leftType.isNumberType();
-            case MOD, BITWISE_AND, BITWISE_OR, BITWISE_XOR -> leftType.isIntegerType();
-            case LOGICAL_AND, LOGICAL_OR -> leftType == Type.BOOL;
-            case EQUAL, NOT_EQUAL -> leftType != Type.VOID;
-        };
-    }
-
     private AnalyzedExpression analyzeExpression(Expression expression, Scope scope) {
         return switch (expression) {
             case FunctionCall         functionCall         -> analyzeFunctionCall(functionCall, scope);
@@ -162,7 +151,7 @@ public class Analyzer {
         return new AnalyzedUnaryOperation(operation, analyzedOperand, analyzedOperand.resultType());
     }
 
-    private boolean isValidUnaryOperation(Type operandType, UnaryOperation.Type operation) {
+    private boolean isValidUnaryOperation(Type operandType, UnaryOperation.UnaryOperationType operation) {
         return switch (operation) {
             case NEGATION -> operandType.isSignedNumberType();
             case BITWISE_NOT -> operandType.isIntegerType();
@@ -315,17 +304,11 @@ public class Analyzer {
     private AnalyzedBinaryOperation analyzeBinaryOperation(BinaryOperation binaryOperation, Scope scope) {
         var analyzedLeft = analyzeExpression(binaryOperation.left(), scope);
         var analyzedRight = analyzeExpression(binaryOperation.right(), scope);
-        BinaryOperation.Type operation = binaryOperation.operation();
-        if (!isValidBinaryOperation(analyzedLeft.resultType(), analyzedRight.resultType(), operation)) {
-            errors.add(new SemanticError("Operator '" + operation + "' is not valid between values of type '" + analyzedLeft.resultType() + "' and '" + analyzedRight.resultType() + "'"));
-        }
-
-        var resultType = getBinaryOperationResultType(analyzedLeft.resultType(), operation);
+        BinaryOperation.BinaryOperationType operation = binaryOperation.operation();
+        Optional<Type> type = BinaryOperation.getResultType(analyzedLeft.resultType(), analyzedRight.resultType(), operation);
+        // TODO: extract warnings
+        var resultType = type.orElse(null);
         return new AnalyzedBinaryOperation(operation, analyzedLeft, analyzedRight, resultType);
-    }
-
-    private Type getBinaryOperationResultType(Type operandType, BinaryOperation.Type operation) {
-        return operation.isComparisonOperation() || operation.isLogicalOperation() ? Type.BOOL : operandType;
     }
 
     private AnalyzedAssignment analyzeAssignment(Assignment assignment, Scope scope) {
