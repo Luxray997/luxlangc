@@ -1,3 +1,8 @@
 package main.parser.nodes.expressions;
 
-public record FloatingPointLiteral(String value) implements Expression { }
+import main.parser.SourceInfo;
+
+public record FloatingPointLiteral(
+    String value,
+    SourceInfo sourceInfo
+) implements Expression { }

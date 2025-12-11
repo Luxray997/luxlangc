@@ -1,5 +1,6 @@
 package main.parser.nodes.expressions;
 
+import main.parser.SourceInfo;
 import main.parser.nodes.Type;
 
 import java.util.Optional;
@@ -7,7 +8,8 @@ import java.util.Optional;
 public record BinaryOperation(
     BinaryOperationType operation,
     Expression left,
-    Expression right
+    Expression right,
+    SourceInfo sourceInfo
 ) implements Expression {
     public enum BinaryOperationType {
         ADD,

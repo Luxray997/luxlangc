@@ -1,8 +1,12 @@
 package main.analysis.nodes.expressions;
 
+import main.parser.SourceInfo;
 import main.parser.nodes.Type;
 
-public record AnalyzedBooleanLiteral(boolean value) implements AnalyzedExpression {
+public record AnalyzedBooleanLiteral(
+    boolean value,
+    SourceInfo sourceInfo
+) implements AnalyzedExpression {
     @Override
     public Type resultType() {
         return Type.BOOL;

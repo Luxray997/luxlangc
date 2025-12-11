@@ -1,5 +1,7 @@
 package main.parser.nodes.expressions;
 
+import main.parser.SourceInfo;
+
 public sealed interface Expression permits FunctionCall,
                                            BinaryOperation,
                                            UnaryOperation,
@@ -7,4 +9,6 @@ public sealed interface Expression permits FunctionCall,
                                            FloatingPointLiteral,
                                            IntegerLiteral,
                                            BooleanLiteral
-{ }
+{
+    SourceInfo sourceInfo();
+}

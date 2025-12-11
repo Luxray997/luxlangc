@@ -1,3 +1,8 @@
 package main.parser.nodes.expressions;
 
-public record VariableExpression(String name) implements Expression { }
+import main.parser.SourceInfo;
+
+public record VariableExpression(
+    String name,
+    SourceInfo sourceInfo
+) implements Expression { }

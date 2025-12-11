@@ -1,5 +1,7 @@
 package main.analysis.nodes.statements;
 
+import main.parser.SourceInfo;
+
 public sealed interface AnalyzedStatement permits AnalyzedCodeBlock,
         AnalyzedIfStatement,
         AnalyzedWhileStatement,
@@ -10,4 +12,5 @@ public sealed interface AnalyzedStatement permits AnalyzedCodeBlock,
         AnalyzedAssignment
 {
     boolean hasGuaranteedReturn();
+    SourceInfo sourceInfo();
 }

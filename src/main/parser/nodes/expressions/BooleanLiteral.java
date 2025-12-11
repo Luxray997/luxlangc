@@ -1,6 +1,11 @@
 package main.parser.nodes.expressions;
 
-public record BooleanLiteral(Value value) implements Expression {
+import main.parser.SourceInfo;
+
+public record BooleanLiteral(
+    Value value,
+    SourceInfo sourceInfo
+) implements Expression {
     public enum Value {
         TRUE,
         FALSE

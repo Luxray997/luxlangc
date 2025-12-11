@@ -37,6 +37,7 @@ public class Parser {
     }
 
     private FunctionDeclaration parseFunctionDeclaration() {
+        Token firstToken = currentToken();
         Type returnType = parseType();
 
         expectCurrentTokenKind(TokenKind.IDENTIFIER);
@@ -55,13 +56,14 @@ public class Parser {
         increment();
 
         CodeBlock body = parseCodeBlock();
-
-        return new FunctionDeclaration(returnType, name, parameters, body);
+        Token lastToken = body.sourceInfo().lastToken();
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new FunctionDeclaration(returnType, name, parameters, body, sourceInfo);
     }
 
     private CodeBlock parseCodeBlock() {
         expectCurrentTokenKind(TokenKind.LEFT_BRACE);
-        increment();
+        Token firstToken = consume();
 
         List<Statement> statements = new ArrayList<>();
         while (currentToken().kind() != TokenKind.RIGHT_BRACE) {
@@ -69,9 +71,10 @@ public class Parser {
         }
 
         expectCurrentTokenKind(TokenKind.RIGHT_BRACE);
-        increment();
 
-        return new CodeBlock(statements);
+        Token lastToken = consume();
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new CodeBlock(statements, sourceInfo);
     }
 
     private Statement parseStatement() {
@@ -112,14 +115,16 @@ public class Parser {
     }
 
     private VariableDeclaration parseVariableDeclaration() {
+        Token firstToken = currentToken();
         Type type = parseType();
 
         expectCurrentTokenKind(TokenKind.IDENTIFIER);
-        String name = currentToken().lexeme();
-        increment();
+        Token lastToken = consume();
+        String name = lastToken.lexeme();
 
         if (currentToken().kind() != TokenKind.ASSIGN) {
-            return new VariableDeclaration(type, name, Optional.empty());
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            return new VariableDeclaration(type, name, Optional.empty(), sourceInfo);
         }
 
         expectCurrentTokenKind(TokenKind.ASSIGN);
@@ -127,25 +132,31 @@ public class Parser {
 
         Expression initialValue = parseExpression();
 
-        return new VariableDeclaration(type, name, Optional.of(initialValue));
+        lastToken = initialValue.sourceInfo().lastToken();
+
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new VariableDeclaration(type, name, Optional.of(initialValue), sourceInfo);
     }
 
     private Assignment parseAssignment() {
         expectCurrentTokenKind(TokenKind.IDENTIFIER);
-        String variableName = currentToken().lexeme();
-        increment();
+        Token firstToken = consume();
+        String variableName = firstToken.lexeme();
 
         expectCurrentTokenKind(TokenKind.ASSIGN);
         increment();
 
         Expression value = parseExpression();
 
-        return new Assignment(variableName, value);
+        Token lastToken = value.sourceInfo().lastToken();
+
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new Assignment(variableName, value, sourceInfo);
     }
 
     private ReturnStatement parseReturnStatement() {
         expectCurrentTokenKind(TokenKind.RETURN);
-        increment();
+        Token firstToken = consume();
 
         Optional<Expression> value = Optional.empty();
         if (currentToken().kind() != TokenKind.SEMICOLON) {
@@ -153,14 +164,16 @@ public class Parser {
         }
 
         expectCurrentTokenKind(TokenKind.SEMICOLON);
-        increment();
 
-        return new ReturnStatement(value);
+        Token lastToken = consume();
+
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new ReturnStatement(value, sourceInfo);
     }
 
     private ForStatement parseForStatement() {
         expectCurrentTokenKind(TokenKind.FOR);
-        increment();
+        Token firstToken = consume();
 
         expectCurrentTokenKind(TokenKind.LEFT_PAREN);
         increment();
@@ -191,7 +204,10 @@ public class Parser {
 
         Statement body = parseStatement();
 
-        return new ForStatement(initializer, condition, update, body);
+        Token lastToken = body.sourceInfo().lastToken();
+
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new ForStatement(initializer, condition, update, body, sourceInfo);
     }
 
     private ForStatement.Initializer parseForInitializer() {
@@ -203,7 +219,7 @@ public class Parser {
 
     private DoWhileStatement parseDoWhileStatement() {
         expectCurrentTokenKind(TokenKind.DO);
-        increment();
+        Token firstToken = consume();
 
         Statement body = parseStatement();
 
@@ -219,14 +235,16 @@ public class Parser {
         increment();
 
         expectCurrentTokenKind(TokenKind.SEMICOLON);
-        increment();
 
-        return new DoWhileStatement(body, condition);
+        Token lastToken = consume();
+
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new DoWhileStatement(body, condition, sourceInfo);
     }
 
     private WhileStatement parseWhileStatement() {
         expectCurrentTokenKind(TokenKind.WHILE);
-        increment();
+        Token firstToken = consume();
 
         expectCurrentTokenKind(TokenKind.LEFT_PAREN);
         increment();
@@ -238,12 +256,15 @@ public class Parser {
 
         Statement body = parseStatement();
 
-        return new WhileStatement(condition, body);
+        Token lastToken = body.sourceInfo().lastToken();
+
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new WhileStatement(condition, body, sourceInfo);
     }
 
     private IfStatement parseIfStatement() {
         expectCurrentTokenKind(TokenKind.IF);
-        increment();
+        Token firstToken = consume();
 
         expectCurrentTokenKind(TokenKind.LEFT_PAREN);
         increment();
@@ -254,14 +275,17 @@ public class Parser {
         increment();
 
         Statement body = parseStatement();
-
+        Token lastToken = body.sourceInfo().lastToken();
         Optional<Statement> elseBody = Optional.empty();
         if (currentToken().kind() == TokenKind.ELSE) {
             increment();
-            elseBody = Optional.of(parseStatement());
+            var elseBodyStatement = parseStatement();
+            lastToken = elseBodyStatement.sourceInfo().lastToken();
+            elseBody = Optional.of(elseBodyStatement);
         }
 
-        return new IfStatement(condition, body, elseBody);
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new IfStatement(condition, body, elseBody, sourceInfo);
     }
 
     private Expression parseExpression() {
@@ -275,7 +299,11 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseLogicalAnd();
-            result = new BinaryOperation(BinaryOperationType.LOGICAL_OR, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(BinaryOperationType.LOGICAL_OR, left, right, sourceInfo);
         }
 
         return result;
@@ -288,7 +316,11 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseBitwiseOr();
-            result = new BinaryOperation(BinaryOperationType.LOGICAL_AND, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(BinaryOperationType.LOGICAL_AND, left, right, sourceInfo);
         }
 
         return result;
@@ -301,7 +333,11 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseBitwiseXor();
-            result = new BinaryOperation(BinaryOperationType.BITWISE_OR, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(BinaryOperationType.BITWISE_OR, left, right, sourceInfo);
         }
 
         return result;
@@ -314,7 +350,11 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseBitwiseAnd();
-            result = new BinaryOperation(BinaryOperationType.BITWISE_XOR, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(BinaryOperationType.BITWISE_XOR, left, right, sourceInfo);
         }
 
         return result;
@@ -327,7 +367,11 @@ public class Parser {
             increment();
             Expression left = result;
             Expression right = parseEquivalence();
-            result = new BinaryOperation(BinaryOperationType.BITWISE_AND, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(BinaryOperationType.BITWISE_AND, left, right, sourceInfo);
         }
 
         return result;
@@ -350,7 +394,11 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseRelational();
-            result = new BinaryOperation(operation, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(operation, left, right, sourceInfo);
         }
 
         return result;
@@ -375,7 +423,11 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseAdditive();
-            result = new BinaryOperation(operation, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(operation, left, right, sourceInfo);
         }
 
         return result;
@@ -398,7 +450,11 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseMultiplicative();
-            result = new BinaryOperation(operation, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(operation, left, right, sourceInfo);
         }
 
         return result;
@@ -422,7 +478,11 @@ public class Parser {
 
             Expression left = result;
             Expression right = parseUnary();
-            result = new BinaryOperation(operation, left, right);
+
+            Token firstToken = left.sourceInfo().firstToken();
+            Token lastToken = right.sourceInfo().lastToken();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            result = new BinaryOperation(operation, left, right, sourceInfo);
         }
 
         return result;
@@ -438,22 +498,26 @@ public class Parser {
                 return parsePrimary();
             }
         }
-        increment();
+        Token firstToken = consume();
 
         Expression operand = parseUnary();
-        return new UnaryOperation(operation, operand);
+
+        Token lastToken = operand.sourceInfo().lastToken();
+        var sourceInfo = new SourceInfo(firstToken, lastToken);
+        return new UnaryOperation(operation, operand, sourceInfo);
     }
 
     private Expression parsePrimary() {
         Token currentToken = currentToken();
 
         if (currentToken.kind() == TokenKind.IDENTIFIER) {
-            String identifierName = currentToken.lexeme();
-            increment();
+            Token firstToken = consume();
+            String identifierName = firstToken.lexeme();
 
             currentToken = currentToken();
             if (currentToken.kind() != TokenKind.LEFT_PAREN) {
-                return new VariableExpression(identifierName);
+                var sourceInfo = new SourceInfo(firstToken, firstToken);
+                return new VariableExpression(identifierName, sourceInfo);
             }
 
             increment();
@@ -464,17 +528,19 @@ public class Parser {
             }
 
             expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-            increment();
 
-            return new FunctionCall(identifierName, arguments);
+            Token lastToken = consume();
+            var sourceInfo = new SourceInfo(firstToken, lastToken);
+            return new FunctionCall(identifierName, arguments, sourceInfo);
         }
 
-        increment();
+        Token firstToken = consume();
+        var sourceInfo = new SourceInfo(firstToken, firstToken);
         return switch (currentToken.kind()) {
-            case LITERAL_INTEGER    -> new IntegerLiteral(currentToken.lexeme());
-            case LITERAL_FLOATINGPT -> new FloatingPointLiteral(currentToken.lexeme());
-            case TRUE               -> new BooleanLiteral(BooleanLiteral.Value.TRUE);
-            case FALSE              -> new BooleanLiteral(BooleanLiteral.Value.FALSE);
+            case LITERAL_INTEGER    -> new IntegerLiteral(currentToken.lexeme(), sourceInfo);
+            case LITERAL_FLOATINGPT -> new FloatingPointLiteral(currentToken.lexeme(), sourceInfo);
+            case TRUE               -> new BooleanLiteral(BooleanLiteral.Value.TRUE, sourceInfo);
+            case FALSE              -> new BooleanLiteral(BooleanLiteral.Value.FALSE, sourceInfo);
             case LEFT_PAREN         -> {
                 Expression result = parseExpression();
 
@@ -555,5 +621,11 @@ public class Parser {
 
     private void increment() {
         i++;
+    }
+
+    private Token consume() {
+        var currentToken = currentToken();
+        increment();
+        return currentToken;
     }
 }

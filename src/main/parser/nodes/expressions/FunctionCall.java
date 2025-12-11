@@ -1,8 +1,11 @@
 package main.parser.nodes.expressions;
 
+import main.parser.SourceInfo;
+
 import java.util.List;
 
 public record FunctionCall(
     String name,
-    List<Expression> arguments
+    List<Expression> arguments,
+    SourceInfo sourceInfo
 ) implements Expression { }

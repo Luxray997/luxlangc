@@ -5,6 +5,7 @@ import main.analysis.nodes.AnalyzedProgram;
 import main.analysis.nodes.expressions.*;
 import main.analysis.nodes.statements.*;
 import main.errors.SemanticError;
+import main.parser.SourceInfo;
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.Program;
@@ -91,7 +92,7 @@ public class Analyzer {
         boolean hasGuaranteedReturn = false;
         for (var statement : codeBlock.statements()) {
             if (hasGuaranteedReturn) {
-                errors.add(new SemanticError("Unreachable statement")); // TODO: carry source information to show where
+                errors.add(new SemanticError("Unreachable statement")); // TODO: actual errors
                 analyzeStatement(statement, thisScope, functionReturnType);
                 continue;
             }
@@ -129,35 +130,28 @@ public class Analyzer {
 
     private AnalyzedBooleanLiteral analyzeBooleanLiteral(BooleanLiteral booleanLiteral) {
         boolean value = booleanLiteral.value() == BooleanLiteral.Value.TRUE;
-        return new AnalyzedBooleanLiteral(value);
+        return new AnalyzedBooleanLiteral(value, booleanLiteral.sourceInfo());
     }
 
     private AnalyzedVariableExpression analyzeVariableExpression(VariableExpression variableExpression, Scope scope) {
         if (!scope.hasVariable(variableExpression.name())) {
             errors.add(new SemanticError("Variable with name '" + variableExpression.name() + "' is not defined in scope"));
-            return new AnalyzedVariableExpression(variableExpression.name(), Type.VOID);
+            return new AnalyzedVariableExpression(variableExpression.name(), Type.VOID, variableExpression.sourceInfo());
         }
 
         VariableSymbol target = scope.getVariable(variableExpression.name());
-        return new AnalyzedVariableExpression(variableExpression.name(), target.type());
+        return new AnalyzedVariableExpression(variableExpression.name(), target.type(), variableExpression.sourceInfo());
     }
 
     private AnalyzedUnaryOperation analyzeUnaryOperation(UnaryOperation unaryOperation, Scope scope) {
         var operation = unaryOperation.operation();
         var analyzedOperand = analyzeExpression(unaryOperation.operand(), scope);
-        if (!isValidUnaryOperation(analyzedOperand.resultType(), operation)) {
+        if (!UnaryOperation.isValid(analyzedOperand.resultType(), operation)) {
             errors.add(new SemanticError("Operator '" + operation + "' is not valid on type '" + analyzedOperand + "'"));
         }
-        return new AnalyzedUnaryOperation(operation, analyzedOperand, analyzedOperand.resultType());
+        return new AnalyzedUnaryOperation(operation, analyzedOperand, analyzedOperand.resultType(), unaryOperation.sourceInfo());
     }
 
-    private boolean isValidUnaryOperation(Type operandType, UnaryOperation.UnaryOperationType operation) {
-        return switch (operation) {
-            case NEGATION -> operandType.isSignedNumberType();
-            case BITWISE_NOT -> operandType.isIntegerType();
-            case LOGICAL_NOT -> operandType == Type.BOOL;
-        };
-    }
 
     private AnalyzedIntegerLiteral analyzeIntegerLiteral(IntegerLiteral integerLiteral) {
         String literal = integerLiteral.value().toUpperCase();
@@ -170,7 +164,7 @@ public class Analyzer {
                         errors.add(new SemanticError("Value does not fit in 'ulong' data type"));
                     }
                     long value = Long.parseUnsignedLong(suffixRemoved);
-                    yield new AnalyzedIntegerLiteral(value, Type.ULONG);
+                    yield new AnalyzedIntegerLiteral(value, Type.ULONG, integerLiteral.sourceInfo());
                 }
                 case 'U' -> {
                     if (exactValue.compareTo(Limits.UINT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.UINT_MIN_VALUE) < 0) {
@@ -178,7 +172,7 @@ public class Analyzer {
                     }
 
                     int value = Integer.parseUnsignedInt(suffixRemoved);
-                    yield new AnalyzedIntegerLiteral(value, Type.UINT);
+                    yield new AnalyzedIntegerLiteral(value, Type.UINT, integerLiteral.sourceInfo());
                 }
                 case 'S' -> {
                     if (exactValue.compareTo(Limits.USHORT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.USHORT_MIN_VALUE) < 0) {
@@ -186,7 +180,7 @@ public class Analyzer {
                     }
 
                     short value = (short) Integer.parseInt(suffixRemoved);
-                    yield new AnalyzedIntegerLiteral(value, Type.USHORT);
+                    yield new AnalyzedIntegerLiteral(value, Type.USHORT, integerLiteral.sourceInfo());
                 }
                 case 'B' -> {
                     if (exactValue.compareTo(Limits.UBYTE_MAX_VALUE) > 0 || exactValue.compareTo(Limits.UBYTE_MIN_VALUE) < 0) {
@@ -194,7 +188,7 @@ public class Analyzer {
                     }
 
                     byte value = (byte) Integer.parseInt(suffixRemoved);
-                    yield new AnalyzedIntegerLiteral(value, Type.UBYTE);
+                    yield new AnalyzedIntegerLiteral(value, Type.UBYTE, integerLiteral.sourceInfo());
                 }
                 default -> throw new IllegalStateException("Unexpected character in integer literal");
             };
@@ -206,7 +200,7 @@ public class Analyzer {
                     errors.add(new SemanticError("Value does not fit in 'long' data type"));
                 }
                 long value = Long.parseLong(suffixRemoved);
-                yield new AnalyzedIntegerLiteral(value, Type.LONG);
+                yield new AnalyzedIntegerLiteral(value, Type.LONG, integerLiteral.sourceInfo());
             }
             case 'S' -> {
                 if (exactValue.compareTo(Limits.SHORT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.SHORT_MIN_VALUE) < 0) {
@@ -214,7 +208,7 @@ public class Analyzer {
                 }
 
                 short value = Short.parseShort(suffixRemoved);
-                yield new AnalyzedIntegerLiteral(value, Type.SHORT);
+                yield new AnalyzedIntegerLiteral(value, Type.SHORT, integerLiteral.sourceInfo());
             }
             case 'B' -> {
                 if (exactValue.compareTo(Limits.BYTE_MAX_VALUE) > 0 || exactValue.compareTo(Limits.BYTE_MIN_VALUE) < 0) {
@@ -222,7 +216,7 @@ public class Analyzer {
                 }
 
                 byte value = Byte.parseByte(suffixRemoved);
-                yield new AnalyzedIntegerLiteral(value, Type.BYTE);
+                yield new AnalyzedIntegerLiteral(value, Type.BYTE, integerLiteral.sourceInfo());
             }
             default -> {
                 if (exactValue.compareTo(Limits.INT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.INT_MIN_VALUE) < 0) {
@@ -230,7 +224,7 @@ public class Analyzer {
                 }
 
                 int value = Integer.parseInt(suffixRemoved);
-                yield new AnalyzedIntegerLiteral(value, Type.INT);
+                yield new AnalyzedIntegerLiteral(value, Type.INT, integerLiteral.sourceInfo());
             }
         };
     }
@@ -238,7 +232,7 @@ public class Analyzer {
     private AnalyzedFunctionCall analyzeFunctionCall(FunctionCall functionCall, Scope scope) {
         if (!scope.hasFunction(functionCall.name())) {
             errors.add(new SemanticError("Function with name '" + functionCall.name() + "' is not defined in scope"));
-            return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.VOID);
+            return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.VOID, functionCall.sourceInfo());
         }
 
         FunctionSymbol target = scope.getFunction(functionCall.name());
@@ -268,7 +262,7 @@ public class Analyzer {
             ));
         }
 
-        return new AnalyzedFunctionCall(functionCall.name(), analyzedArguments, target.returnType());
+        return new AnalyzedFunctionCall(functionCall.name(), analyzedArguments, target.returnType(), functionCall.sourceInfo());
     }
 
     private AnalyzedFloatingPointLiteral analyzeFloatingPointLiteral(FloatingPointLiteral floatingPointLiteral) {
@@ -287,7 +281,7 @@ public class Analyzer {
                 }
 
                 float value = Float.parseFloat(suffixRemoved);
-                yield new AnalyzedFloatingPointLiteral(value, Type.FLOAT);
+                yield new AnalyzedFloatingPointLiteral(value, Type.FLOAT, floatingPointLiteral.sourceInfo());
             }
             case DOUBLE -> {
                 if (exactValue.abs().compareTo(Limits.DOUBLE_MAX_VALUE) > 0 || exactValue.abs().compareTo(Limits.DOUBLE_MIN_VALUE) < 0) {
@@ -295,7 +289,7 @@ public class Analyzer {
                 }
 
                 double value = Double.parseDouble(suffixRemoved);
-                yield new AnalyzedFloatingPointLiteral(value, Type.FLOAT);
+                yield new AnalyzedFloatingPointLiteral(value, Type.FLOAT, floatingPointLiteral.sourceInfo());
             }
             default -> throw new IllegalStateException("Unexpected type of floating point literal");
         };
@@ -308,14 +302,14 @@ public class Analyzer {
         Optional<Type> type = BinaryOperation.getResultType(analyzedLeft.resultType(), analyzedRight.resultType(), operation);
         // TODO: extract warnings
         var resultType = type.orElse(null);
-        return new AnalyzedBinaryOperation(operation, analyzedLeft, analyzedRight, resultType);
+        return new AnalyzedBinaryOperation(operation, analyzedLeft, analyzedRight, resultType, binaryOperation.sourceInfo());
     }
 
     private AnalyzedAssignment analyzeAssignment(Assignment assignment, Scope scope) {
         if (!scope.hasVariable(assignment.variableName())) {
             errors.add(new SemanticError("Could not find variable with name '" + assignment.variableName() + "'"));
             var analyzedValue = analyzeExpression(assignment.value(), scope);
-            return new AnalyzedAssignment(assignment.variableName(), analyzedValue);
+            return new AnalyzedAssignment(assignment.variableName(), analyzedValue, assignment.sourceInfo());
         }
 
         VariableSymbol target = scope.getVariable(assignment.variableName());
@@ -326,18 +320,18 @@ public class Analyzer {
             errors.add(new SemanticError("Variable '" + target.name() + "' with type '" + target.type() + "' assigned to value of type '" + analyzedValue.resultType() + "'"));
         }
 
-        return new AnalyzedAssignment(assignment.variableName(), analyzedValue);
+        return new AnalyzedAssignment(assignment.variableName(), analyzedValue, assignment.sourceInfo());
     }
 
     private AnalyzedVariableDeclaration analyzeVariableDeclaration(VariableDeclaration variableDeclaration, Scope scope) {
         if (scope.hasVariable(variableDeclaration.name())) {
             errors.add(new SemanticError("Variable with name '" + variableDeclaration.name() + "' conflicts with another variable in scope"));
-            return new AnalyzedVariableDeclaration(variableDeclaration.type(), variableDeclaration.name(), Optional.empty());
+            return AnalyzedVariableDeclaration.from(variableDeclaration, Optional.empty());
         }
 
         if (variableDeclaration.type() == Type.VOID) {
             errors.add(new SemanticError("Variable cannot be declared as void type"));
-            return new AnalyzedVariableDeclaration(variableDeclaration.type(), variableDeclaration.name(), Optional.empty());
+            return AnalyzedVariableDeclaration.from(variableDeclaration, Optional.empty());
         }
 
         scope.addVariable(variableDeclaration);
@@ -351,11 +345,7 @@ public class Analyzer {
             }
         }
 
-        return new AnalyzedVariableDeclaration(
-            variableDeclaration.type(),
-            variableDeclaration.name(),
-            Optional.ofNullable(analyzedInitialValue)
-        );
+        return AnalyzedVariableDeclaration.from(variableDeclaration, Optional.ofNullable(analyzedInitialValue));
     }
 
     private AnalyzedReturnStatement analyzeReturnStatement(ReturnStatement returnStatement, Scope scope, Type functionReturnType) {
@@ -363,7 +353,7 @@ public class Analyzer {
         if (returnStatement.value().isPresent()) {
             if (functionReturnType == Type.VOID) {
                 errors.add(new SemanticError("Returned a value in void function"));
-                return new AnalyzedReturnStatement(Optional.empty());
+                return new AnalyzedReturnStatement(Optional.empty(), returnStatement.sourceInfo());
             }
             analyzedReturnValue = analyzeExpression(returnStatement.value().get(), scope);
             if (analyzedReturnValue.resultType() != functionReturnType) {
@@ -373,7 +363,7 @@ public class Analyzer {
             errors.add(new SemanticError("Return value expected"));
         }
 
-        return new AnalyzedReturnStatement(Optional.ofNullable(analyzedReturnValue));
+        return new AnalyzedReturnStatement(Optional.ofNullable(analyzedReturnValue), returnStatement.sourceInfo());
     }
 
     private AnalyzedForStatement analyzeForStatement(ForStatement forStatement, Scope scope, Type functionReturnType) {
@@ -411,7 +401,8 @@ public class Analyzer {
             Optional.ofNullable(analyzedCondition),
             Optional.ofNullable(analyzedAssignment), 
             analyzedBody,
-            hasGuaranteedReturn        
+            hasGuaranteedReturn,
+            forStatement.sourceInfo()
         );
     }
 
@@ -423,7 +414,7 @@ public class Analyzer {
             errors.add(new SemanticError("Do-While loop contains non-boolean condition"));
         }
 
-        return new AnalyzedDoWhileStatement(analyzedBody, analyzedCondition, analyzedBody.hasGuaranteedReturn());
+        return new AnalyzedDoWhileStatement(analyzedBody, analyzedCondition, analyzedBody.hasGuaranteedReturn(), doWhileStatement.sourceInfo());
     }
 
 
@@ -438,7 +429,7 @@ public class Analyzer {
         var analyzedBody = analyzeStatement(whileStatement.body(), scope, functionReturnType);
 
         var hasGuaranteedReturn = alwaysTrue && analyzedBody.hasGuaranteedReturn();
-        return new AnalyzedWhileStatement(analyzedCondition, analyzedBody, hasGuaranteedReturn);
+        return new AnalyzedWhileStatement(analyzedCondition, analyzedBody, hasGuaranteedReturn, whileStatement.sourceInfo());
     }
 
     private AnalyzedIfStatement analyzeIfStatement(IfStatement ifStatement, Scope scope, Type functionReturnType) {
@@ -454,11 +445,11 @@ public class Analyzer {
         if (ifStatement.elseBody().isPresent()) {
             var analyzedElseBody = analyzeStatement(ifStatement.elseBody().get(), scope, functionReturnType);
             var hasGuaranteedReturn = analyzedBody.hasGuaranteedReturn() && (alwaysTrue || analyzedElseBody.hasGuaranteedReturn());
-            return new AnalyzedIfStatement(analyzedCondition, analyzedBody, Optional.of(analyzedElseBody),  hasGuaranteedReturn);
+            return new AnalyzedIfStatement(analyzedCondition, analyzedBody, Optional.of(analyzedElseBody), hasGuaranteedReturn, ifStatement.sourceInfo());
         }
 
         boolean hasGuaranteedReturn = alwaysTrue && analyzedBody.hasGuaranteedReturn();
-        return new AnalyzedIfStatement(analyzedCondition, analyzedBody, Optional.empty(), hasGuaranteedReturn);
+        return new AnalyzedIfStatement(analyzedCondition, analyzedBody, Optional.empty(), hasGuaranteedReturn, ifStatement.sourceInfo());
     }
 
     private void addLocalVariableFrom(VariableDeclaration variableDeclaration) {

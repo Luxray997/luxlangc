@@ -1,5 +1,7 @@
 package main.parser.nodes.statements;
 
+import main.parser.SourceInfo;
+
 public sealed interface Statement permits CodeBlock,
                                           IfStatement,
                                           WhileStatement,
@@ -8,4 +10,6 @@ public sealed interface Statement permits CodeBlock,
                                           ReturnStatement,
                                           VariableDeclaration,
                                           Assignment
-{ }
+{
+    SourceInfo sourceInfo();
+}

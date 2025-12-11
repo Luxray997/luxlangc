@@ -1,8 +1,10 @@
 package main.parser.nodes.statements;
 
+import main.parser.SourceInfo;
 import main.parser.nodes.expressions.Expression;
 
 public record Assignment(
     String variableName,
-    Expression value
+    Expression value,
+    SourceInfo sourceInfo
 ) implements Statement, ForStatement.Initializer { }
