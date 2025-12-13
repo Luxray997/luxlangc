@@ -9,9 +9,19 @@ public record UnaryOperation(
     SourceInfo sourceInfo
 ) implements Expression {
     public enum UnaryOperationType {
-        LOGICAL_NOT,
-        BITWISE_NOT,
-        NEGATION
+        LOGICAL_NOT("!="),
+        BITWISE_NOT("~"),
+        NEGATION("-");
+
+        private final String lexeme;
+
+        UnaryOperationType(String lexeme) {
+            this.lexeme = lexeme;
+        }
+
+        public String lexeme() {
+            return lexeme;
+        }
     }
 
     public static boolean isValid(Type operandType, UnaryOperationType operation) {

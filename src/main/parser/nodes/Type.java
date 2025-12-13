@@ -20,6 +20,10 @@ public enum Type {
 
     private final int sizeBytes;
 
+    public String lexeme() {
+        return this.toString().toLowerCase();
+    }
+
     public int sizeBytes() {
         return sizeBytes;
     }

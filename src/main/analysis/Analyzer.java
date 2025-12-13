@@ -4,8 +4,7 @@ import main.analysis.nodes.AnalyzedFunctionDeclaration;
 import main.analysis.nodes.AnalyzedProgram;
 import main.analysis.nodes.expressions.*;
 import main.analysis.nodes.statements.*;
-import main.errors.SemanticError;
-import main.parser.SourceInfo;
+import main.errors.*;
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.Program;
@@ -26,11 +25,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static main.util.StringUtils.typeListAsString;
-
 public class Analyzer {
     private final Program program;
-    private final List<SemanticError> errors;
+    private final List<SrcCodeError> errors;
 
     private int nextLocalVariableId;
     private List<LocalVariable> localVariables;
@@ -40,6 +37,11 @@ public class Analyzer {
         this.errors = new ArrayList<>();
     }
 
+    /**
+     * Runs semantic analysis on the Program AST passed into the constructor
+     * @return An analyzed AST if the analysis had no errors, otherwise, the errors
+     * causing the AST to be invalid
+     */
     public AnalysisResult runAnalysis() {
         var analyzed = analyzeProgram();
         return new AnalysisResult(analyzed, errors);
@@ -49,7 +51,7 @@ public class Analyzer {
         Scope globalScope = new Scope(null);
         for (var function : program.functionDeclarations()) {
             if (globalScope.hasFunction(function.name())) {
-                errors.add(new SemanticError("Function with name '" + function.name() + "' conflicts with another function in scope"));
+                errors.add(new DuplicateFunctionNameError(function));
                 continue;
             }
             globalScope.addFunction(function);
@@ -71,7 +73,7 @@ public class Analyzer {
         localVariables = new ArrayList<>();
         for (var parameter : functionDeclaration.parameters()) {
             if (functionScope.hasVariable(parameter.name())) {
-                errors.add(new SemanticError("Parameter with name '" + parameter.name() + "' conflicts with another variable in scope"));
+                errors.add(new DuplicateVariableNameError(parameter));
                 continue;
             }
             functionScope.addVariable(parameter);
@@ -81,7 +83,7 @@ public class Analyzer {
         Type returnType = functionDeclaration.returnType();
         var analyzed = analyzeCodeBlock(functionDeclaration.body(), functionScope, returnType);
         if (returnType != Type.VOID && !analyzed.hasGuaranteedReturn()) {
-            errors.add(new SemanticError("Not all code paths return a value"));
+            errors.add(new IndeterminateReturnError(functionDeclaration));
         }
         return AnalyzedFunctionDeclaration.from(functionDeclaration, analyzed, localVariables);
     }
@@ -92,7 +94,7 @@ public class Analyzer {
         boolean hasGuaranteedReturn = false;
         for (var statement : codeBlock.statements()) {
             if (hasGuaranteedReturn) {
-                errors.add(new SemanticError("Unreachable statement")); // TODO: actual errors
+                errors.add(new UnreachableStatementError(statement));
                 analyzeStatement(statement, thisScope, functionReturnType);
                 continue;
             }
@@ -100,7 +102,7 @@ public class Analyzer {
             statements.add(analyzed);
             hasGuaranteedReturn = analyzed.hasGuaranteedReturn();
         }
-        return new AnalyzedCodeBlock(statements, hasGuaranteedReturn);
+        return new AnalyzedCodeBlock(statements, hasGuaranteedReturn, codeBlock.sourceInfo());
     }
 
     private AnalyzedStatement analyzeStatement(Statement statement, Scope scope, Type functionReturnType) {
@@ -135,7 +137,7 @@ public class Analyzer {
 
     private AnalyzedVariableExpression analyzeVariableExpression(VariableExpression variableExpression, Scope scope) {
         if (!scope.hasVariable(variableExpression.name())) {
-            errors.add(new SemanticError("Variable with name '" + variableExpression.name() + "' is not defined in scope"));
+            errors.add(new UndefinedVariableError(variableExpression));
             return new AnalyzedVariableExpression(variableExpression.name(), Type.VOID, variableExpression.sourceInfo());
         }
 
@@ -147,7 +149,7 @@ public class Analyzer {
         var operation = unaryOperation.operation();
         var analyzedOperand = analyzeExpression(unaryOperation.operand(), scope);
         if (!UnaryOperation.isValid(analyzedOperand.resultType(), operation)) {
-            errors.add(new SemanticError("Operator '" + operation + "' is not valid on type '" + analyzedOperand + "'"));
+            errors.add(new InvalidOperationError(unaryOperation, analyzedOperand.resultType()));
         }
         return new AnalyzedUnaryOperation(operation, analyzedOperand, analyzedOperand.resultType(), unaryOperation.sourceInfo());
     }
@@ -161,14 +163,14 @@ public class Analyzer {
             return switch (literal.charAt(literal.length() - 1)) {
                 case 'L' -> {
                     if (exactValue.compareTo(Limits.ULONG_MAX_VALUE) > 0 || exactValue.compareTo(Limits.ULONG_MIN_VALUE) < 0) {
-                        errors.add(new SemanticError("Value does not fit in 'ulong' data type"));
+                        errors.add(new LiteralOverflowError(integerLiteral, Type.ULONG));
                     }
                     long value = Long.parseUnsignedLong(suffixRemoved);
                     yield new AnalyzedIntegerLiteral(value, Type.ULONG, integerLiteral.sourceInfo());
                 }
                 case 'U' -> {
                     if (exactValue.compareTo(Limits.UINT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.UINT_MIN_VALUE) < 0) {
-                        errors.add(new SemanticError("Value does not fit in 'uint' data type"));
+                        errors.add(new LiteralOverflowError(integerLiteral, Type.UINT));
                     }
 
                     int value = Integer.parseUnsignedInt(suffixRemoved);
@@ -176,7 +178,7 @@ public class Analyzer {
                 }
                 case 'S' -> {
                     if (exactValue.compareTo(Limits.USHORT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.USHORT_MIN_VALUE) < 0) {
-                        errors.add(new SemanticError("Value does not fit in 'ushort' data type"));
+                        errors.add(new LiteralOverflowError(integerLiteral, Type.USHORT));
                     }
 
                     short value = (short) Integer.parseInt(suffixRemoved);
@@ -184,7 +186,7 @@ public class Analyzer {
                 }
                 case 'B' -> {
                     if (exactValue.compareTo(Limits.UBYTE_MAX_VALUE) > 0 || exactValue.compareTo(Limits.UBYTE_MIN_VALUE) < 0) {
-                        errors.add(new SemanticError("Value does not fit in 'ubyte' data type"));
+                        errors.add(new LiteralOverflowError(integerLiteral, Type.UBYTE));
                     }
 
                     byte value = (byte) Integer.parseInt(suffixRemoved);
@@ -197,14 +199,14 @@ public class Analyzer {
         return switch (literal.charAt(literal.length() - 1)) {
             case 'L' -> {
                 if (exactValue.compareTo(Limits.LONG_MAX_VALUE) > 0 || exactValue.compareTo(Limits.LONG_MIN_VALUE) < 0) {
-                    errors.add(new SemanticError("Value does not fit in 'long' data type"));
+                    errors.add(new LiteralOverflowError(integerLiteral, Type.LONG));
                 }
                 long value = Long.parseLong(suffixRemoved);
                 yield new AnalyzedIntegerLiteral(value, Type.LONG, integerLiteral.sourceInfo());
             }
             case 'S' -> {
                 if (exactValue.compareTo(Limits.SHORT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.SHORT_MIN_VALUE) < 0) {
-                    errors.add(new SemanticError("Value does not fit in 'short' data type"));
+                    errors.add(new LiteralOverflowError(integerLiteral, Type.SHORT));
                 }
 
                 short value = Short.parseShort(suffixRemoved);
@@ -212,7 +214,7 @@ public class Analyzer {
             }
             case 'B' -> {
                 if (exactValue.compareTo(Limits.BYTE_MAX_VALUE) > 0 || exactValue.compareTo(Limits.BYTE_MIN_VALUE) < 0) {
-                    errors.add(new SemanticError("Value does not fit in 'byte' data type"));
+                    errors.add(new LiteralOverflowError(integerLiteral, Type.BYTE));
                 }
 
                 byte value = Byte.parseByte(suffixRemoved);
@@ -220,7 +222,7 @@ public class Analyzer {
             }
             default -> {
                 if (exactValue.compareTo(Limits.INT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.INT_MIN_VALUE) < 0) {
-                    errors.add(new SemanticError("Value does not fit in 'int' data type"));
+                    errors.add(new LiteralOverflowError(integerLiteral, Type.INT));
                 }
 
                 int value = Integer.parseInt(suffixRemoved);
@@ -231,7 +233,7 @@ public class Analyzer {
 
     private AnalyzedFunctionCall analyzeFunctionCall(FunctionCall functionCall, Scope scope) {
         if (!scope.hasFunction(functionCall.name())) {
-            errors.add(new SemanticError("Function with name '" + functionCall.name() + "' is not defined in scope"));
+            errors.add(new UndefinedFunctionError(functionCall));
             return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.VOID, functionCall.sourceInfo());
         }
 
@@ -247,19 +249,7 @@ public class Analyzer {
         }
 
         if (!argumentTypes.equals(parameterTypes)) {
-            errors.add(new SemanticError(
-                """
-                Argument type mismatch for function '%s'
-                Expected: %s
-                Actual  : %s(%s)
-                """
-                .formatted(
-                    functionCall.name(),
-                    target.signatureString(),
-                    functionCall.name(),
-                    typeListAsString(argumentTypes)
-                )
-            ));
+            errors.add(new ArgumentTypeMismatchError(functionCall, argumentTypes, target));
         }
 
         return new AnalyzedFunctionCall(functionCall.name(), analyzedArguments, target.returnType(), functionCall.sourceInfo());
@@ -277,7 +267,7 @@ public class Analyzer {
         return switch (type) {
             case FLOAT -> {
                 if (exactValue.abs().compareTo(Limits.FLOAT_MAX_VALUE) > 0 || exactValue.abs().compareTo(Limits.FLOAT_MIN_VALUE) < 0) {
-                    errors.add(new SemanticError("Value does not fit in 'float' data type"));
+                    errors.add(new LiteralOverflowError(floatingPointLiteral,  Type.FLOAT));
                 }
 
                 float value = Float.parseFloat(suffixRemoved);
@@ -285,7 +275,7 @@ public class Analyzer {
             }
             case DOUBLE -> {
                 if (exactValue.abs().compareTo(Limits.DOUBLE_MAX_VALUE) > 0 || exactValue.abs().compareTo(Limits.DOUBLE_MIN_VALUE) < 0) {
-                    errors.add(new SemanticError("Value does not fit in 'double' data type"));
+                    errors.add(new LiteralOverflowError(floatingPointLiteral,  Type.DOUBLE));
                 }
 
                 double value = Double.parseDouble(suffixRemoved);
@@ -300,14 +290,17 @@ public class Analyzer {
         var analyzedRight = analyzeExpression(binaryOperation.right(), scope);
         BinaryOperation.BinaryOperationType operation = binaryOperation.operation();
         Optional<Type> type = BinaryOperation.getResultType(analyzedLeft.resultType(), analyzedRight.resultType(), operation);
-        // TODO: extract warnings
+        // TODO: extract warnings/errors from above method
+        if (type.isEmpty()) {
+            errors.add(new InvalidOperationError(binaryOperation, analyzedLeft.resultType(), analyzedRight.resultType()));
+        }
         var resultType = type.orElse(null);
         return new AnalyzedBinaryOperation(operation, analyzedLeft, analyzedRight, resultType, binaryOperation.sourceInfo());
     }
 
     private AnalyzedAssignment analyzeAssignment(Assignment assignment, Scope scope) {
         if (!scope.hasVariable(assignment.variableName())) {
-            errors.add(new SemanticError("Could not find variable with name '" + assignment.variableName() + "'"));
+            errors.add(new UndefinedVariableError(assignment));
             var analyzedValue = analyzeExpression(assignment.value(), scope);
             return new AnalyzedAssignment(assignment.variableName(), analyzedValue, assignment.sourceInfo());
         }
@@ -317,7 +310,7 @@ public class Analyzer {
         var analyzedValue = analyzeExpression(assignment.value(), scope);
 
         if (target.type() != analyzedValue.resultType()) {
-            errors.add(new SemanticError("Variable '" + target.name() + "' with type '" + target.type() + "' assigned to value of type '" + analyzedValue.resultType() + "'"));
+            errors.add(new TypeMismatchError(assignment, target.type(), analyzedValue.resultType()));
         }
 
         return new AnalyzedAssignment(assignment.variableName(), analyzedValue, assignment.sourceInfo());
@@ -325,12 +318,12 @@ public class Analyzer {
 
     private AnalyzedVariableDeclaration analyzeVariableDeclaration(VariableDeclaration variableDeclaration, Scope scope) {
         if (scope.hasVariable(variableDeclaration.name())) {
-            errors.add(new SemanticError("Variable with name '" + variableDeclaration.name() + "' conflicts with another variable in scope"));
+            errors.add(new DuplicateVariableNameError(variableDeclaration));
             return AnalyzedVariableDeclaration.from(variableDeclaration, Optional.empty());
         }
 
         if (variableDeclaration.type() == Type.VOID) {
-            errors.add(new SemanticError("Variable cannot be declared as void type"));
+            errors.add(new VoidVariableError(variableDeclaration));
             return AnalyzedVariableDeclaration.from(variableDeclaration, Optional.empty());
         }
 
@@ -341,7 +334,7 @@ public class Analyzer {
         if (variableDeclaration.initialValue().isPresent()) {
             analyzedInitialValue = analyzeExpression(variableDeclaration.initialValue().get(), scope);
             if (variableDeclaration.type() != analyzedInitialValue.resultType()) {
-                errors.add(new SemanticError("Variable '" + variableDeclaration.name() + "' declared with type '" + variableDeclaration.type() + "' but assigned to value of type '" + analyzedInitialValue.resultType() + "'"));
+                errors.add(new TypeMismatchError(variableDeclaration, analyzedInitialValue.resultType()));
             }
         }
 
@@ -352,15 +345,15 @@ public class Analyzer {
         AnalyzedExpression analyzedReturnValue = null;
         if (returnStatement.value().isPresent()) {
             if (functionReturnType == Type.VOID) {
-                errors.add(new SemanticError("Returned a value in void function"));
+                errors.add(new ReturnTypeError(returnStatement));
                 return new AnalyzedReturnStatement(Optional.empty(), returnStatement.sourceInfo());
             }
             analyzedReturnValue = analyzeExpression(returnStatement.value().get(), scope);
             if (analyzedReturnValue.resultType() != functionReturnType) {
-                errors.add(new SemanticError("Returned value of type '" + analyzedReturnValue.resultType() + "' in function with return type of '" + functionReturnType + "'"));
+                errors.add(new ReturnTypeError(returnStatement, functionReturnType, analyzedReturnValue.resultType()));
             }
         } else if (functionReturnType != Type.VOID) {
-            errors.add(new SemanticError("Return value expected"));
+            errors.add(new ReturnMissingValueError(returnStatement));
         }
 
         return new AnalyzedReturnStatement(Optional.ofNullable(analyzedReturnValue), returnStatement.sourceInfo());
@@ -382,7 +375,7 @@ public class Analyzer {
         if (forStatement.condition().isPresent()) {
             analyzedCondition = analyzeExpression(forStatement.condition().get(), headerScope);
             if (analyzedCondition.resultType() != Type.BOOL) {
-                errors.add(new SemanticError("For loop contains non-boolean condition"));
+                errors.add(new InvalidConditionError(forStatement));
             }
             alwaysTrue = forStatement.condition().get() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;
         }
@@ -411,7 +404,7 @@ public class Analyzer {
 
         var analyzedCondition = analyzeExpression(doWhileStatement.condition(), scope);
         if (analyzedCondition.resultType() != Type.BOOL) {
-            errors.add(new SemanticError("Do-While loop contains non-boolean condition"));
+            errors.add(new InvalidConditionError(doWhileStatement));
         }
 
         return new AnalyzedDoWhileStatement(analyzedBody, analyzedCondition, analyzedBody.hasGuaranteedReturn(), doWhileStatement.sourceInfo());
@@ -421,7 +414,7 @@ public class Analyzer {
     private AnalyzedWhileStatement analyzeWhileStatement(WhileStatement whileStatement, Scope scope, Type functionReturnType) {
         var analyzedCondition = analyzeExpression(whileStatement.condition(), scope);
         if (analyzedCondition.resultType() != Type.BOOL) {
-            errors.add(new SemanticError("While loop contains non-boolean condition"));
+            errors.add(new InvalidConditionError(whileStatement));
         }
 
         var alwaysTrue = whileStatement.condition() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;
@@ -435,7 +428,7 @@ public class Analyzer {
     private AnalyzedIfStatement analyzeIfStatement(IfStatement ifStatement, Scope scope, Type functionReturnType) {
         var analyzedCondition = analyzeExpression(ifStatement.condition(), scope);
         if (analyzedCondition.resultType() != Type.BOOL) {
-            errors.add(new SemanticError("If statement contains non-boolean condition"));
+            errors.add(new InvalidConditionError(ifStatement));
         }
 
         var alwaysTrue = ifStatement.condition() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;

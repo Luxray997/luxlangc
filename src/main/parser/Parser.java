@@ -577,13 +577,15 @@ public class Parser {
         List<Parameter> parameterList = new ArrayList<>();
 
         do {
+            Token firstToken = currentToken();
             Type type = parseType();
 
             expectCurrentTokenKind(TokenKind.IDENTIFIER);
             String name = currentToken().lexeme();
-            increment();
+            Token lastToken = consume();
 
-            parameterList.add(new Parameter(type, name));
+            var sourceInfo =  new SourceInfo(firstToken, lastToken);
+            parameterList.add(new Parameter(type, name, sourceInfo));
         } while (compareAndIncrement(TokenKind.COMMA));
 
         return parameterList;
