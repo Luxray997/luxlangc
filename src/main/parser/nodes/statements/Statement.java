@@ -1,6 +1,6 @@
 package main.parser.nodes.statements;
 
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 
 public sealed interface Statement permits CodeBlock,
                                           IfStatement,

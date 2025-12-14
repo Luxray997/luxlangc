@@ -1,4 +1,4 @@
-package main.analysis;
+package main.analysis.objects;
 
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Parameter;

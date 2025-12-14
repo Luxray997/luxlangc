@@ -1,6 +1,6 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.lexer.Token;
+import main.lexer.objects.Token;
 import main.parser.nodes.Type;
 import main.parser.nodes.statements.Assignment;
 import main.parser.nodes.statements.VariableDeclaration;
@@ -9,7 +9,7 @@ public record TypeMismatchError(
         String reason,
         Token startToken,
         Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE = "Variable '%s' declared with type '%s' but assigned to value of type '%s'";
 
     public TypeMismatchError(Assignment assignment, Type variableType, Type valueType) {

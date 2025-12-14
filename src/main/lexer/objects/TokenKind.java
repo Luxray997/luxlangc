@@ -1,4 +1,4 @@
-package main.lexer;
+package main.lexer.objects;
 
 public enum TokenKind {
     // Keywords (Types)
@@ -62,7 +62,7 @@ public enum TokenKind {
         this.lexeme = lexeme;
     }
 
-    public String getLexeme() {
+    public String lexeme() {
         return lexeme;
     }
 

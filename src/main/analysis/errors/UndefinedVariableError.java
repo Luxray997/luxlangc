@@ -1,16 +1,14 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.lexer.Token;
-import main.parser.nodes.Parameter;
+import main.lexer.objects.Token;
 import main.parser.nodes.expressions.VariableExpression;
 import main.parser.nodes.statements.Assignment;
-import main.parser.nodes.statements.VariableDeclaration;
 
 public record UndefinedVariableError(
         String reason,
         Token startToken,
         Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE = "Variable with name '%s' is not defined in scope";
 
     public UndefinedVariableError(VariableExpression variable) {

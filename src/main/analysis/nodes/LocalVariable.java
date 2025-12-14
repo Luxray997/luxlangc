@@ -1,4 +1,4 @@
-package main.analysis;
+package main.analysis.nodes;
 
 import main.parser.nodes.Type;
 

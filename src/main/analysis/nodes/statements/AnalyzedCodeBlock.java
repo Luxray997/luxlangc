@@ -1,6 +1,6 @@
 package main.analysis.nodes.statements;
 
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 
 import java.util.List;
 

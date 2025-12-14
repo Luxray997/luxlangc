@@ -1,6 +1,6 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.lexer.Token;
+import main.lexer.objects.Token;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.statements.VariableDeclaration;
 
@@ -8,7 +8,7 @@ public record DuplicateVariableNameError(
         String reason,
         Token startToken,
         Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE_VARIABLE = "Variable with name '%s' conflicts with another variable in scope";
     private static final String REASON_TEMPLATE_PARAMETER = "Variable with name '%s' conflicts with another variable in scope";
 

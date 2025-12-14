@@ -1,6 +1,6 @@
 package main.analysis.nodes.expressions;
 
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 import main.parser.nodes.Type;
 
 public record AnalyzedFloatingPointLiteral(

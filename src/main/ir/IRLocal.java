@@ -1,6 +1,6 @@
 package main.ir;
 
-import main.analysis.LocalVariable;
+import main.analysis.nodes.LocalVariable;
 import main.parser.nodes.Type;
 
 public record IRLocal(

@@ -1,7 +1,7 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.analysis.FunctionSymbol;
-import main.lexer.Token;
+import main.analysis.objects.FunctionSymbol;
+import main.lexer.objects.Token;
 import main.parser.nodes.Type;
 import main.parser.nodes.expressions.FunctionCall;
 
@@ -13,7 +13,7 @@ public record ArgumentTypeMismatchError(
         String reason,
         Token startToken,
         Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE = """
                 Argument type mismatch for function '%s'
                 Expected: %s

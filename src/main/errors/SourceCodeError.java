@@ -1,14 +1,17 @@
 package main.errors;
 
-import main.lexer.Token;
+public interface SourceCodeError {
+    String MESSAGE_TEMPLATE = """
+        Source code error: %s
+        At line: %d, column: %d
+        """;
 
-public class SourceCodeError extends RuntimeException {
-    public SourceCodeError(String message, Token token) {
-        super(message + " (line " + token.line() + ", column " + token.column() + ")");
+    String reason();
+    int line();
+    int column();
 
-    }
 
-    public SourceCodeError(String message, int line, int column) {
-        super(message + " (line " + line + ", column " + column + ")");
+    default String message() {
+        return MESSAGE_TEMPLATE.formatted(reason(), line(), column());
     }
 }

@@ -1,7 +1,7 @@
 package main.analysis.nodes.statements;
 
 import main.analysis.nodes.expressions.AnalyzedExpression;
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 
 public record AnalyzedAssignment(
     String variableName,

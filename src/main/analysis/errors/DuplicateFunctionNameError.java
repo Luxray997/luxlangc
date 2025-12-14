@@ -1,13 +1,13 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.lexer.Token;
+import main.lexer.objects.Token;
 import main.parser.nodes.FunctionDeclaration;
 
 public record DuplicateFunctionNameError(
     String reason,
     Token startToken,
     Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE = "Function with name '%s' conflicts with another function in scope";
 
     public DuplicateFunctionNameError(FunctionDeclaration function) {

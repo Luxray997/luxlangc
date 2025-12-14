@@ -1,10 +1,14 @@
 package main.analysis;
 
+import main.analysis.errors.*;
 import main.analysis.nodes.AnalyzedFunctionDeclaration;
 import main.analysis.nodes.AnalyzedProgram;
+import main.analysis.nodes.LocalVariable;
 import main.analysis.nodes.expressions.*;
 import main.analysis.nodes.statements.*;
-import main.errors.*;
+import main.analysis.objects.FunctionSymbol;
+import main.analysis.objects.Scope;
+import main.analysis.objects.VariableSymbol;
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.Program;
@@ -18,6 +22,7 @@ import main.parser.nodes.statements.Assignment;
 import main.parser.nodes.statements.ForStatement;
 import main.parser.nodes.statements.ReturnStatement;
 import main.parser.nodes.statements.VariableDeclaration;
+import main.util.NumberLimits;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -27,7 +32,7 @@ import java.util.Optional;
 
 public class Analyzer {
     private final Program program;
-    private final List<SrcCodeError> errors;
+    private final List<AnalysisError> errors;
 
     private int nextLocalVariableId;
     private List<LocalVariable> localVariables;
@@ -42,9 +47,12 @@ public class Analyzer {
      * @return An analyzed AST if the analysis had no errors, otherwise, the errors
      * causing the AST to be invalid
      */
-    public AnalysisResult runAnalysis() {
-        var analyzed = analyzeProgram();
-        return new AnalysisResult(analyzed, errors);
+    public AnalysisResult analyze() {
+        var analyzedProgram = analyzeProgram();
+        if (errors.isEmpty()) {
+            return AnalysisResult.success(analyzedProgram);
+        }
+        return AnalysisResult.failure(errors);
     }
 
     private AnalyzedProgram analyzeProgram() {
@@ -72,10 +80,15 @@ public class Analyzer {
         nextLocalVariableId = 0;
         localVariables = new ArrayList<>();
         for (var parameter : functionDeclaration.parameters()) {
+            if (parameter.type() == Type.VOID) {
+                errors.add(new VoidVariableError(parameter));
+            }
+
             if (functionScope.hasVariable(parameter.name())) {
                 errors.add(new DuplicateVariableNameError(parameter));
                 continue;
             }
+
             functionScope.addVariable(parameter);
             addLocalVariableFrom(parameter);
         }
@@ -162,14 +175,14 @@ public class Analyzer {
         if (literal.contains("U")) {
             return switch (literal.charAt(literal.length() - 1)) {
                 case 'L' -> {
-                    if (exactValue.compareTo(Limits.ULONG_MAX_VALUE) > 0 || exactValue.compareTo(Limits.ULONG_MIN_VALUE) < 0) {
+                    if (exactValue.compareTo(NumberLimits.ULONG_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.ULONG_MIN_VALUE) < 0) {
                         errors.add(new LiteralOverflowError(integerLiteral, Type.ULONG));
                     }
                     long value = Long.parseUnsignedLong(suffixRemoved);
                     yield new AnalyzedIntegerLiteral(value, Type.ULONG, integerLiteral.sourceInfo());
                 }
                 case 'U' -> {
-                    if (exactValue.compareTo(Limits.UINT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.UINT_MIN_VALUE) < 0) {
+                    if (exactValue.compareTo(NumberLimits.UINT_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.UINT_MIN_VALUE) < 0) {
                         errors.add(new LiteralOverflowError(integerLiteral, Type.UINT));
                     }
 
@@ -177,7 +190,7 @@ public class Analyzer {
                     yield new AnalyzedIntegerLiteral(value, Type.UINT, integerLiteral.sourceInfo());
                 }
                 case 'S' -> {
-                    if (exactValue.compareTo(Limits.USHORT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.USHORT_MIN_VALUE) < 0) {
+                    if (exactValue.compareTo(NumberLimits.USHORT_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.USHORT_MIN_VALUE) < 0) {
                         errors.add(new LiteralOverflowError(integerLiteral, Type.USHORT));
                     }
 
@@ -185,7 +198,7 @@ public class Analyzer {
                     yield new AnalyzedIntegerLiteral(value, Type.USHORT, integerLiteral.sourceInfo());
                 }
                 case 'B' -> {
-                    if (exactValue.compareTo(Limits.UBYTE_MAX_VALUE) > 0 || exactValue.compareTo(Limits.UBYTE_MIN_VALUE) < 0) {
+                    if (exactValue.compareTo(NumberLimits.UBYTE_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.UBYTE_MIN_VALUE) < 0) {
                         errors.add(new LiteralOverflowError(integerLiteral, Type.UBYTE));
                     }
 
@@ -198,14 +211,14 @@ public class Analyzer {
 
         return switch (literal.charAt(literal.length() - 1)) {
             case 'L' -> {
-                if (exactValue.compareTo(Limits.LONG_MAX_VALUE) > 0 || exactValue.compareTo(Limits.LONG_MIN_VALUE) < 0) {
+                if (exactValue.compareTo(NumberLimits.LONG_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.LONG_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(integerLiteral, Type.LONG));
                 }
                 long value = Long.parseLong(suffixRemoved);
                 yield new AnalyzedIntegerLiteral(value, Type.LONG, integerLiteral.sourceInfo());
             }
             case 'S' -> {
-                if (exactValue.compareTo(Limits.SHORT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.SHORT_MIN_VALUE) < 0) {
+                if (exactValue.compareTo(NumberLimits.SHORT_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.SHORT_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(integerLiteral, Type.SHORT));
                 }
 
@@ -213,7 +226,7 @@ public class Analyzer {
                 yield new AnalyzedIntegerLiteral(value, Type.SHORT, integerLiteral.sourceInfo());
             }
             case 'B' -> {
-                if (exactValue.compareTo(Limits.BYTE_MAX_VALUE) > 0 || exactValue.compareTo(Limits.BYTE_MIN_VALUE) < 0) {
+                if (exactValue.compareTo(NumberLimits.BYTE_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.BYTE_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(integerLiteral, Type.BYTE));
                 }
 
@@ -221,7 +234,7 @@ public class Analyzer {
                 yield new AnalyzedIntegerLiteral(value, Type.BYTE, integerLiteral.sourceInfo());
             }
             default -> {
-                if (exactValue.compareTo(Limits.INT_MAX_VALUE) > 0 || exactValue.compareTo(Limits.INT_MIN_VALUE) < 0) {
+                if (exactValue.compareTo(NumberLimits.INT_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.INT_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(integerLiteral, Type.INT));
                 }
 
@@ -266,7 +279,7 @@ public class Analyzer {
         var exactValue = new BigDecimal(suffixRemoved);
         return switch (type) {
             case FLOAT -> {
-                if (exactValue.abs().compareTo(Limits.FLOAT_MAX_VALUE) > 0 || exactValue.abs().compareTo(Limits.FLOAT_MIN_VALUE) < 0) {
+                if (exactValue.abs().compareTo(NumberLimits.FLOAT_MAX_VALUE) > 0 || exactValue.abs().compareTo(NumberLimits.FLOAT_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(floatingPointLiteral,  Type.FLOAT));
                 }
 
@@ -274,7 +287,7 @@ public class Analyzer {
                 yield new AnalyzedFloatingPointLiteral(value, Type.FLOAT, floatingPointLiteral.sourceInfo());
             }
             case DOUBLE -> {
-                if (exactValue.abs().compareTo(Limits.DOUBLE_MAX_VALUE) > 0 || exactValue.abs().compareTo(Limits.DOUBLE_MIN_VALUE) < 0) {
+                if (exactValue.abs().compareTo(NumberLimits.DOUBLE_MAX_VALUE) > 0 || exactValue.abs().compareTo(NumberLimits.DOUBLE_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(floatingPointLiteral,  Type.DOUBLE));
                 }
 

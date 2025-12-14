@@ -1,9 +1,9 @@
-package main.analysis;
+package main.util;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
-public final class Limits {
+public final class NumberLimits {
     public static final BigInteger ULONG_MAX_VALUE = new BigInteger("FFFFFFFFFFFFFFFF", 16);
     public static final BigInteger ULONG_MIN_VALUE = BigInteger.ZERO;
 

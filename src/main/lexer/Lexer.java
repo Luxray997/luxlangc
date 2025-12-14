@@ -1,7 +1,13 @@
 package main.lexer;
 
+import main.lexer.errors.LexingError;
+import main.lexer.errors.UnexpectedTokenError;
+import main.lexer.objects.Token;
+import main.lexer.objects.TokenKind;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 public class Lexer {
@@ -24,7 +30,7 @@ public class Lexer {
         this.tokens = new ArrayList<>();
     }
 
-    public List<Token> lex() {
+    public LexingResult lex() {
         while (true) {
             char currChar = peekCurrentOrNull();
             if (currChar == '\0') {
@@ -47,26 +53,30 @@ public class Lexer {
                 continue;
             }
 
-            addOperatorOrPunctuation(currChar);
+            var optionalError = addOperatorOrPunctuation(currChar);
+            if (optionalError.isPresent()) {
+                return LexingResult.failure(List.of(optionalError.get()));
+            }
             increment();
         }
 
-        return tokens;
+        return LexingResult.success(tokens);
     }
 
-    private void addOperatorOrPunctuation(char currChar) {
+    private Optional<LexingError> addOperatorOrPunctuation(char currChar) {
         final int startLine = line;
         final int startColumn = column;
         char charAfterCurr = peekNextOrNull();
         TokenKind kind = TokenKind.getOperatorOrPunctuation(currChar, charAfterCurr);
         if (kind == TokenKind.ERROR) {
-            throw new LexingError(line, column);
+            return Optional.of(new UnexpectedTokenError(startLine, startColumn));
         }
-        String lexeme = kind.getLexeme();
+        String lexeme = kind.lexeme();
         if (lexeme.length() == 2) {
             increment();
         }
         tokens.add(new Token(kind, lexeme, startLine, startColumn));
+        return Optional.empty();
     }
 
     private void addNumberLiteral() {

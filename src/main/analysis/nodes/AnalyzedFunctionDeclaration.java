@@ -1,8 +1,7 @@
 package main.analysis.nodes;
 
-import main.analysis.LocalVariable;
 import main.analysis.nodes.statements.AnalyzedCodeBlock;
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 import main.parser.nodes.FunctionDeclaration;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.Type;

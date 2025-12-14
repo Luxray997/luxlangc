@@ -1,14 +1,14 @@
 package main.parser;
 
-import main.lexer.Token;
-import main.lexer.TokenKind;
-import main.parser.errors.ParsingError;
-import main.parser.errors.UnexpectedKindError;
+import main.lexer.objects.Token;
+import main.lexer.objects.TokenKind;
+import main.parser.errors.*;
 import main.parser.nodes.*;
 import main.parser.nodes.expressions.*;
 import main.parser.nodes.expressions.BinaryOperation.BinaryOperationType;
 import main.parser.nodes.expressions.UnaryOperation.UnaryOperationType;
 import main.parser.nodes.statements.*;
+import main.parser.objects.SourceInfo;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,24 +16,35 @@ import java.util.Optional;
 
 public class Parser {
     private final List<Token> tokens;
+    private final List<ParsingError> errors;
     private int i;
 
     public Parser(List<Token> tokens) {
         this.tokens = tokens;
+        this.errors = new ArrayList<>();
         this.i = 0;
     }
 
-    public Program parse() {
-        return parseProgram();
+    public ParsingResult parse() {
+        try {
+            return parseProgram();
+        } catch (FatalParsingException exception) {
+            return ParsingResult.failure(errors);
+        }
     }
 
-    private Program parseProgram() {
+    private ParsingResult parseProgram() {
         List<FunctionDeclaration> functionDeclarations = new ArrayList<>();
         while (currentToken().kind() != TokenKind.EOF) {
             FunctionDeclaration function = parseFunctionDeclaration();
             functionDeclarations.add(function);
         }
-        return new Program(functionDeclarations);
+
+        if (errors.isEmpty()) {
+            var program = new Program(functionDeclarations);
+            return ParsingResult.success(program);
+        }
+        return ParsingResult.failure(errors);
     }
 
     private FunctionDeclaration parseFunctionDeclaration() {
@@ -91,7 +102,8 @@ public class Parser {
                 if (kind.isTypeKind()) {
                     yield parseVariableDeclarationStatement();
                 }
-                throw new ParsingError("Not a statement", currentToken());
+                errors.add(new NotAStatementError(currentToken()));
+                throw new FatalParsingException();
             }
         };
     }
@@ -549,7 +561,10 @@ public class Parser {
 
                 yield result;
             }
-            default                 -> throw new ParsingError("Could not parse expression", currentToken);
+            default -> {
+                errors.add(new NotAnExpressionError(currentToken));
+                yield null;
+            }
         };
     }
 
@@ -567,7 +582,10 @@ public class Parser {
             case ULONG -> Type.ULONG;
             case FLOAT -> Type.FLOAT;
             case DOUBLE -> Type.DOUBLE;
-            default -> throw new ParsingError("Expected a type", currentToken());
+            default -> {
+                errors.add(new NotATypeError(currentToken()));
+                yield Type.VOID;
+            }
         };
         increment();
         return type;
@@ -604,7 +622,7 @@ public class Parser {
     private void expectCurrentTokenKind(TokenKind kind) {
         Token currentToken = currentToken();
         if (currentToken.kind() != kind) {
-            throw new UnexpectedKindError(currentToken, kind);
+            errors.add(new UnexpectedKindError(currentToken, kind));
         }
     }
 

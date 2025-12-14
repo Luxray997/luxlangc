@@ -1,4 +1,4 @@
-package main.lexer;
+package main.lexer.objects;
 
 public record Token(
     TokenKind kind,

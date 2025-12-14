@@ -1,6 +1,6 @@
 package main.parser.nodes;
 
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 import main.parser.nodes.statements.CodeBlock;
 
 import java.util.List;

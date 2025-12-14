@@ -1,6 +1,6 @@
 package main.parser.nodes.expressions;
 
-import main.parser.SourceInfo;
+import main.parser.objects.SourceInfo;
 
 public record VariableExpression(
     String name,

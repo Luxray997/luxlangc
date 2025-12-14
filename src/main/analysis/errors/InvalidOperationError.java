@@ -1,6 +1,6 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.lexer.Token;
+import main.lexer.objects.Token;
 import main.parser.nodes.Type;
 import main.parser.nodes.expressions.BinaryOperation;
 import main.parser.nodes.expressions.UnaryOperation;
@@ -9,7 +9,7 @@ public record InvalidOperationError(
     String reason,
     Token startToken,
     Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE_UNARY = "Unary operation '%s' is not allowed on operand of type '%s'";
     private static final String REASON_TEMPLATE_BINARY = "Binary operation '%s' is not allowed between operands of type '%s' and '%s'";
 

@@ -1,6 +1,6 @@
-package main.errors;
+package main.analysis.errors;
 
-import main.lexer.Token;
+import main.lexer.objects.Token;
 import main.parser.nodes.Parameter;
 import main.parser.nodes.statements.VariableDeclaration;
 
@@ -8,7 +8,7 @@ public record VoidVariableError(
         String reason,
         Token startToken,
         Token endToken
-) implements SrcCodeError {
+) implements AnalysisError {
     private static final String REASON_TEMPLATE_VARIABLE = "Variable cannot be declared as void type";
     private static final String REASON_TEMPLATE_PARAMETER = "Parameter cannot be declared as void type";
 
