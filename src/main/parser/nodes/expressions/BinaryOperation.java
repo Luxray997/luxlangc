@@ -12,22 +12,32 @@ public record BinaryOperation(
     SourceInfo sourceInfo
 ) implements Expression {
     public enum BinaryOperationType {
-        ADD,
-        SUB,
-        MULT,
-        DIV,
-        MOD,
-        LOGICAL_AND,
-        LOGICAL_OR,
-        BITWISE_AND,
-        BITWISE_OR,
-        BITWISE_XOR,
-        EQUAL,
-        NOT_EQUAL,
-        LESS,
-        LESS_EQUAL,
-        GREATER,
-        GREATER_EQUAL;
+        ADD("+"),
+        SUB("-"),
+        MULT("*"),
+        DIV("/"),
+        MOD("%"),
+        LOGICAL_AND("&&"),
+        LOGICAL_OR("||"),
+        BITWISE_AND("&"),
+        BITWISE_OR("|"),
+        BITWISE_XOR("^"),
+        EQUAL("=="),
+        NOT_EQUAL("!="),
+        LESS("<"),
+        LESS_EQUAL("<="),
+        GREATER(">"),
+        GREATER_EQUAL(">=");
+
+        private final String lexeme;
+
+        BinaryOperationType(String lexeme) {
+            this.lexeme = lexeme;
+        }
+
+        public String lexeme() {
+            return lexeme;
+        }
 
         public boolean isComparisonOperation() {
             return switch (this) {
@@ -143,7 +153,7 @@ public record BinaryOperation(
             return Optional.empty();
         }
 
-        if (!leftType.isNumberType() || rightType.isNumberType()) {
+        if (!leftType.isNumberType() || !rightType.isNumberType()) {
             return Optional.empty();
         }
 

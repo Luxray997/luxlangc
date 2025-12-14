@@ -170,7 +170,7 @@ public class Analyzer {
 
     private AnalyzedIntegerLiteral analyzeIntegerLiteral(IntegerLiteral integerLiteral) {
         String literal = integerLiteral.value().toUpperCase();
-        String suffixRemoved = literal.split("[LUSB]", 1)[0];
+        String suffixRemoved = literal.replaceAll("[LUSB]", "");
         BigInteger exactValue = new BigInteger(suffixRemoved);
         if (literal.contains("U")) {
             return switch (literal.charAt(literal.length() - 1)) {
@@ -274,7 +274,7 @@ public class Analyzer {
             case 'f', 'F' -> Type.FLOAT;
             default -> Type.DOUBLE;
         };
-        String suffixRemoved = literal.split("[dDfF]", 1)[0];
+        String suffixRemoved = literal.replaceAll("[dDfF]", "");
 
         var exactValue = new BigDecimal(suffixRemoved);
         return switch (type) {
@@ -292,7 +292,7 @@ public class Analyzer {
                 }
 
                 double value = Double.parseDouble(suffixRemoved);
-                yield new AnalyzedFloatingPointLiteral(value, Type.FLOAT, floatingPointLiteral.sourceInfo());
+                yield new AnalyzedFloatingPointLiteral(value, Type.DOUBLE, floatingPointLiteral.sourceInfo());
             }
             default -> throw new IllegalStateException("Unexpected type of floating point literal");
         };
@@ -307,7 +307,8 @@ public class Analyzer {
         if (type.isEmpty()) {
             errors.add(new InvalidOperationError(binaryOperation, analyzedLeft.resultType(), analyzedRight.resultType()));
         }
-        var resultType = type.orElse(null);
+        // TODO: custom error type (?) so that type errors aren't propagated
+        var resultType = type.orElse(Type.VOID);
         return new AnalyzedBinaryOperation(operation, analyzedLeft, analyzedRight, resultType, binaryOperation.sourceInfo());
     }
 

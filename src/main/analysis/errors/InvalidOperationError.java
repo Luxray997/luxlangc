@@ -23,7 +23,7 @@ public record InvalidOperationError(
 
     public InvalidOperationError(BinaryOperation binaryOperation, Type leftType, Type rightType) {
         this(
-            REASON_TEMPLATE_BINARY.formatted(binaryOperation.operation(), leftType.lexeme(), rightType.lexeme()),
+            REASON_TEMPLATE_BINARY.formatted(binaryOperation.operation().lexeme(), leftType.lexeme(), rightType.lexeme()),
             binaryOperation.sourceInfo().firstToken(),
             binaryOperation.sourceInfo().lastToken()
         );

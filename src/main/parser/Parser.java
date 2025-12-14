@@ -623,6 +623,7 @@ public class Parser {
         Token currentToken = currentToken();
         if (currentToken.kind() != kind) {
             errors.add(new UnexpectedKindError(currentToken, kind));
+            throw new FatalParsingException();
         }
     }
 
