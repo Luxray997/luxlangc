@@ -1,14 +1,11 @@
 package luxlang.compiler.ir;
 
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
-import luxlang.compiler.analysis.nodes.LocalVariable;
 import luxlang.compiler.parser.nodes.Type;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import static luxlang.compiler.ir.IRBuilderTestUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.*;
 
 public class IRBuilderTest {
 
@@ -26,18 +23,22 @@ public class IRBuilderTest {
         IRBuilder builder = new IRBuilder(program);
         IRModule module = builder.build();
         
-        assertEquals(1, module.functions().size());
-        IRFunction irFunction = module.functions().get(0);
-        assertEquals("main", irFunction.name());
-        assertEquals(Type.INT, irFunction.returnType());
-        assertEquals(0, irFunction.parameterTypes().size());
-        assertEquals(0, irFunction.locals().size());
-        assertTrue(irFunction.basicBlocks().size() >= 1);
-        
-        // Entry block should exist with a terminator
-        BasicBlock entryBlock = irFunction.basicBlocks().get(0);
-        assertNotNull(entryBlock);
-        assertNotNull(entryBlock.terminator());
+        assertThat(module.functions())
+            .hasSize(1)
+            .first()
+            .satisfies(irFunction -> {
+                assertThat(irFunction.name()).isEqualTo("main");
+                assertThat(irFunction.returnType()).isEqualTo(Type.INT);
+                assertThat(irFunction.parameterTypes()).isEmpty();
+                assertThat(irFunction.locals()).isEmpty();
+                assertThat(irFunction.basicBlocks())
+                    .isNotEmpty()
+                    .first()
+                    .satisfies(entryBlock -> {
+                        assertThat(entryBlock).isNotNull();
+                        assertThat(entryBlock.terminator()).isNotNull();
+                    });
+            });
     }
 
     @Test
@@ -55,14 +56,16 @@ public class IRBuilderTest {
         IRBuilder builder = new IRBuilder(program);
         IRModule module = builder.build();
         
-        IRFunction irFunction = module.functions().get(0);
-        assertEquals(1, irFunction.locals().size());
-        assertTrue(irFunction.locals().containsKey("x"));
+        assertThat(module.functions().get(0).locals())
+            .hasSize(1)
+            .containsKey("x");
         
-        IRLocal local = irFunction.locals().get("x");
-        assertEquals("x", local.name());
-        assertEquals(Type.INT, local.type());
-        assertEquals(0, local.index());
+        assertThat(module.functions().get(0).locals().get("x"))
+            .satisfies(local -> {
+                assertThat(local.name()).isEqualTo("x");
+                assertThat(local.type()).isEqualTo(Type.INT);
+                assertThat(local.index()).isEqualTo(0);
+            });
     }
 
     @Test
@@ -81,10 +84,9 @@ public class IRBuilderTest {
         IRBuilder builder = new IRBuilder(program);
         IRModule module = builder.build();
         
-        IRFunction irFunction = module.functions().get(0);
-        assertEquals(2, irFunction.locals().size());
-        assertTrue(irFunction.locals().containsKey("x"));
-        assertTrue(irFunction.locals().containsKey("y"));
+        assertThat(module.functions().get(0).locals())
+            .hasSize(2)
+            .containsKeys("x", "y");
     }
 
     @Test
@@ -106,9 +108,10 @@ public class IRBuilderTest {
         IRBuilder builder = new IRBuilder(program);
         IRModule module = builder.build();
         
-        assertEquals(2, module.functions().size());
-        assertEquals("foo", module.functions().get(0).name());
-        assertEquals("bar", module.functions().get(1).name());
+        assertThat(module.functions())
+            .hasSize(2)
+            .extracting(IRFunction::name)
+            .containsExactly("foo", "bar");
     }
 
     @Test
@@ -125,11 +128,13 @@ public class IRBuilderTest {
         IRBuilder builder = new IRBuilder(program);
         IRModule module = builder.build();
         
-        IRFunction irFunction = module.functions().get(0);
-        assertEquals("empty", irFunction.name());
-        assertEquals(Type.VOID, irFunction.returnType());
-        assertEquals(0, irFunction.locals().size());
-        assertTrue(irFunction.basicBlocks().size() >= 1);
+        assertThat(module.functions().get(0))
+            .satisfies(irFunction -> {
+                assertThat(irFunction.name()).isEqualTo("empty");
+                assertThat(irFunction.returnType()).isEqualTo(Type.VOID);
+                assertThat(irFunction.locals()).isEmpty();
+                assertThat(irFunction.basicBlocks()).isNotEmpty();
+            });
     }
 
     @Test
@@ -146,17 +151,12 @@ public class IRBuilderTest {
         IRBuilder builder = new IRBuilder(program);
         IRModule module = builder.build();
         
-        IRFunction irFunction = module.functions().get(0);
-        List<BasicBlock> blocks = irFunction.basicBlocks();
-        
-        // Should have at least one basic block (entry)
-        assertTrue(blocks.size() >= 1);
-        
-        // Entry block should have a name
-        BasicBlock entryBlock = blocks.get(0);
-        assertNotNull(entryBlock.name());
-        
-        // Entry block should have a terminator
-        assertNotNull(entryBlock.terminator());
+        assertThat(module.functions().get(0).basicBlocks())
+            .isNotEmpty()
+            .first()
+            .satisfies(entryBlock -> {
+                assertThat(entryBlock.name()).isNotNull();
+                assertThat(entryBlock.terminator()).isNotNull();
+            });
     }
 }

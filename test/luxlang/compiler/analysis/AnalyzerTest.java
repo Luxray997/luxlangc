@@ -1,15 +1,11 @@
 package luxlang.compiler.analysis;
 
-import luxlang.compiler.analysis.nodes.AnalyzedFunctionDeclaration;
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
-import luxlang.compiler.analysis.nodes.LocalVariable;
 import luxlang.compiler.parser.nodes.*;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import static luxlang.compiler.analysis.AnalyzerTestUtils.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.*;
 
 public class AnalyzerTest {
 
@@ -27,14 +23,17 @@ public class AnalyzerTest {
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
         
-        assertInstanceOf(AnalysisResult.Success.class, result);
+        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
         AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
         
-        assertEquals(1, analyzedProgram.functionDeclarations().size());
-        AnalyzedFunctionDeclaration analyzedFunction = analyzedProgram.functionDeclarations().get(0);
-        assertEquals("main", analyzedFunction.name());
-        assertEquals(Type.INT, analyzedFunction.returnType());
-        assertEquals(0, analyzedFunction.parameters().size());
+        assertThat(analyzedProgram.functionDeclarations())
+            .hasSize(1)
+            .first()
+            .satisfies(function -> {
+                assertThat(function.name()).isEqualTo("main");
+                assertThat(function.returnType()).isEqualTo(Type.INT);
+                assertThat(function.parameters()).isEmpty();
+            });
     }
 
     @Test
@@ -53,18 +52,18 @@ public class AnalyzerTest {
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
         
-        assertInstanceOf(AnalysisResult.Success.class, result);
+        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
         AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
         
-        AnalyzedFunctionDeclaration analyzedFunction = analyzedProgram.functionDeclarations().get(0);
-        assertEquals("add", analyzedFunction.name());
-        assertEquals(2, analyzedFunction.parameters().size());
-        assertEquals(2, analyzedFunction.localVariables().size());
-        
-        // Parameters should be in local variables
-        List<LocalVariable> locals = analyzedFunction.localVariables();
-        assertTrue(locals.stream().anyMatch(v -> v.name().equals("a")));
-        assertTrue(locals.stream().anyMatch(v -> v.name().equals("b")));
+        assertThat(analyzedProgram.functionDeclarations().get(0))
+            .satisfies(function -> {
+                assertThat(function.name()).isEqualTo("add");
+                assertThat(function.parameters()).hasSize(2);
+                assertThat(function.localVariables())
+                    .hasSize(2)
+                    .extracting("name")
+                    .containsExactlyInAnyOrder("a", "b");
+            });
     }
 
     @Test
@@ -83,21 +82,19 @@ public class AnalyzerTest {
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
         
-        assertInstanceOf(AnalysisResult.Success.class, result);
+        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
         AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
         
-        AnalyzedFunctionDeclaration analyzedFunction = analyzedProgram.functionDeclarations().get(0);
-        List<LocalVariable> locals = analyzedFunction.localVariables();
-        
-        assertEquals(2, locals.size());
+        assertThat(analyzedProgram.functionDeclarations().get(0).localVariables())
+            .hasSize(2)
+            .extracting("name")
+            .containsExactlyInAnyOrder("x", "y")
+            .doesNotHaveDuplicates();
         
         // Check that variables have unique IDs
-        long uniqueIds = locals.stream().map(LocalVariable::id).distinct().count();
-        assertEquals(locals.size(), uniqueIds);
-        
-        // Check variable names
-        assertTrue(locals.stream().anyMatch(v -> v.name().equals("x")));
-        assertTrue(locals.stream().anyMatch(v -> v.name().equals("y")));
+        assertThat(analyzedProgram.functionDeclarations().get(0).localVariables())
+            .extracting("id")
+            .doesNotHaveDuplicates();
     }
 
     @Test
@@ -119,12 +116,13 @@ public class AnalyzerTest {
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
         
-        assertInstanceOf(AnalysisResult.Success.class, result);
+        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
         AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
         
-        assertEquals(2, analyzedProgram.functionDeclarations().size());
-        assertEquals("foo", analyzedProgram.functionDeclarations().get(0).name());
-        assertEquals("bar", analyzedProgram.functionDeclarations().get(1).name());
+        assertThat(analyzedProgram.functionDeclarations())
+            .hasSize(2)
+            .extracting("name")
+            .containsExactly("foo", "bar");
     }
 
     @Test
@@ -141,12 +139,14 @@ public class AnalyzerTest {
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
         
-        assertInstanceOf(AnalysisResult.Success.class, result);
+        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
         AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
         
-        AnalyzedFunctionDeclaration analyzedFunction = analyzedProgram.functionDeclarations().get(0);
-        assertEquals("empty", analyzedFunction.name());
-        assertEquals(Type.VOID, analyzedFunction.returnType());
-        assertEquals(0, analyzedFunction.localVariables().size());
+        assertThat(analyzedProgram.functionDeclarations().get(0))
+            .satisfies(function -> {
+                assertThat(function.name()).isEqualTo("empty");
+                assertThat(function.returnType()).isEqualTo(Type.VOID);
+                assertThat(function.localVariables()).isEmpty();
+            });
     }
 }

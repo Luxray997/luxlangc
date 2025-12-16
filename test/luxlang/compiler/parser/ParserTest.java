@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static luxlang.compiler.parser.ParserTestUtils.tokens;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.*;
 
 public class ParserTest {
 
@@ -36,19 +36,24 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        assertEquals(1, program.functionDeclarations().size());
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        assertEquals("main", function.name());
-        assertEquals(Type.INT, function.returnType());
-        assertEquals(0, function.parameters().size());
-        assertInstanceOf(CodeBlock.class, function.body());
-        
-        CodeBlock body = function.body();
-        assertEquals(1, body.statements().size());
-        assertInstanceOf(ReturnStatement.class, body.statements().get(0));
+        assertThat(program.functionDeclarations())
+            .hasSize(1)
+            .first()
+            .satisfies(function -> {
+                assertThat(function.name()).isEqualTo("main");
+                assertThat(function.returnType()).isEqualTo(Type.INT);
+                assertThat(function.parameters()).isEmpty();
+                assertThat(function.body())
+                    .isInstanceOf(CodeBlock.class)
+                    .extracting(CodeBlock::statements)
+                    .asList()
+                    .hasSize(1)
+                    .first()
+                    .isInstanceOf(ReturnStatement.class);
+            });
     }
 
     @Test
@@ -77,22 +82,26 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        assertEquals(1, program.functionDeclarations().size());
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        assertEquals("add", function.name());
-        assertEquals(Type.INT, function.returnType());
-        assertEquals(2, function.parameters().size());
-        
-        Parameter param1 = function.parameters().get(0);
-        assertEquals("a", param1.name());
-        assertEquals(Type.INT, param1.type());
-        
-        Parameter param2 = function.parameters().get(1);
-        assertEquals("b", param2.name());
-        assertEquals(Type.INT, param2.type());
+        assertThat(program.functionDeclarations())
+            .hasSize(1)
+            .first()
+            .satisfies(function -> {
+                assertThat(function.name()).isEqualTo("add");
+                assertThat(function.returnType()).isEqualTo(Type.INT);
+                assertThat(function.parameters())
+                    .hasSize(2)
+                    .satisfies(params -> {
+                        assertThat(params.get(0))
+                            .extracting(Parameter::name, Parameter::type)
+                            .containsExactly("a", Type.INT);
+                        assertThat(params.get(1))
+                            .extracting(Parameter::name, Parameter::type)
+                            .containsExactly("b", Type.INT);
+                    });
+            });
     }
 
     @Test
@@ -117,19 +126,18 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        CodeBlock body = function.body();
-        assertEquals(2, body.statements().size());
+        assertThat(program.functionDeclarations().get(0).body().statements())
+            .hasSize(2)
+            .first()
+            .isInstanceOf(VariableDeclaration.class);
         
-        Statement stmt1 = body.statements().get(0);
-        assertInstanceOf(VariableDeclaration.class, stmt1);
-        VariableDeclaration varDecl = (VariableDeclaration) stmt1;
-        assertEquals("x", varDecl.name());
-        assertEquals(Type.INT, varDecl.type());
-        assertTrue(varDecl.initialValue().isEmpty());
+        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
+        assertThat(varDecl.name()).isEqualTo("x");
+        assertThat(varDecl.type()).isEqualTo(Type.INT);
+        assertThat(varDecl.initialValue()).isEmpty();
     }
 
     @Test
@@ -156,20 +164,22 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        CodeBlock body = function.body();
-        assertEquals(2, body.statements().size());
+        assertThat(program.functionDeclarations().get(0).body().statements())
+            .hasSize(2)
+            .first()
+            .isInstanceOf(VariableDeclaration.class);
         
-        Statement stmt1 = body.statements().get(0);
-        assertInstanceOf(VariableDeclaration.class, stmt1);
-        VariableDeclaration varDecl = (VariableDeclaration) stmt1;
-        assertEquals("y", varDecl.name());
-        assertEquals(Type.INT, varDecl.type());
-        assertTrue(varDecl.initialValue().isPresent());
-        assertInstanceOf(IntegerLiteral.class, varDecl.initialValue().get());
+        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
+        assertThat(varDecl.name()).isEqualTo("y");
+        assertThat(varDecl.type()).isEqualTo(Type.INT);
+        assertThat(varDecl.initialValue())
+            .isPresent()
+            .hasValueSatisfying(value -> 
+                assertThat(value).isInstanceOf(IntegerLiteral.class)
+            );
     }
 
     @Test
@@ -200,19 +210,18 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        CodeBlock body = function.body();
-        assertEquals(2, body.statements().size());
+        assertThat(program.functionDeclarations().get(0).body().statements())
+            .hasSize(2)
+            .first()
+            .isInstanceOf(IfStatement.class);
         
-        Statement stmt = body.statements().get(0);
-        assertInstanceOf(IfStatement.class, stmt);
-        IfStatement ifStmt = (IfStatement) stmt;
-        assertInstanceOf(BooleanLiteral.class, ifStmt.condition());
-        assertInstanceOf(CodeBlock.class, ifStmt.body());
-        assertTrue(ifStmt.elseBody().isEmpty());
+        IfStatement ifStmt = (IfStatement) program.functionDeclarations().get(0).body().statements().get(0);
+        assertThat(ifStmt.condition()).isInstanceOf(BooleanLiteral.class);
+        assertThat(ifStmt.body()).isInstanceOf(CodeBlock.class);
+        assertThat(ifStmt.elseBody()).isEmpty();
     }
 
     @Test
@@ -241,22 +250,23 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        CodeBlock body = function.body();
+        assertThat(program.functionDeclarations().get(0).body().statements())
+            .first()
+            .isInstanceOf(VariableDeclaration.class);
         
-        Statement stmt1 = body.statements().get(0);
-        assertInstanceOf(VariableDeclaration.class, stmt1);
-        VariableDeclaration varDecl = (VariableDeclaration) stmt1;
-        assertTrue(varDecl.initialValue().isPresent());
-        assertInstanceOf(BinaryOperation.class, varDecl.initialValue().get());
-        
-        BinaryOperation binOp = (BinaryOperation) varDecl.initialValue().get();
-        assertEquals(BinaryOperation.BinaryOperationType.ADD, binOp.operation());
-        assertInstanceOf(IntegerLiteral.class, binOp.left());
-        assertInstanceOf(IntegerLiteral.class, binOp.right());
+        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
+        assertThat(varDecl.initialValue())
+            .isPresent()
+            .hasValueSatisfying(value -> {
+                assertThat(value).isInstanceOf(BinaryOperation.class);
+                BinaryOperation binOp = (BinaryOperation) value;
+                assertThat(binOp.operation()).isEqualTo(BinaryOperation.BinaryOperationType.ADD);
+                assertThat(binOp.left()).isInstanceOf(IntegerLiteral.class);
+                assertThat(binOp.right()).isInstanceOf(IntegerLiteral.class);
+            });
     }
 
     @Test
@@ -284,21 +294,22 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        CodeBlock body = function.body();
+        assertThat(program.functionDeclarations().get(0).body().statements())
+            .first()
+            .isInstanceOf(VariableDeclaration.class);
         
-        Statement stmt1 = body.statements().get(0);
-        assertInstanceOf(VariableDeclaration.class, stmt1);
-        VariableDeclaration varDecl = (VariableDeclaration) stmt1;
-        assertTrue(varDecl.initialValue().isPresent());
-        assertInstanceOf(UnaryOperation.class, varDecl.initialValue().get());
-        
-        UnaryOperation unaryOp = (UnaryOperation) varDecl.initialValue().get();
-        assertEquals(UnaryOperation.UnaryOperationType.NEGATION, unaryOp.operation());
-        assertInstanceOf(IntegerLiteral.class, unaryOp.operand());
+        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
+        assertThat(varDecl.initialValue())
+            .isPresent()
+            .hasValueSatisfying(value -> {
+                assertThat(value).isInstanceOf(UnaryOperation.class);
+                UnaryOperation unaryOp = (UnaryOperation) value;
+                assertThat(unaryOp.operation()).isEqualTo(UnaryOperation.UnaryOperationType.NEGATION);
+                assertThat(unaryOp.operand()).isInstanceOf(IntegerLiteral.class);
+            });
     }
 
     @Test
@@ -329,16 +340,15 @@ public class ParserTest {
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();
         
-        assertInstanceOf(ParsingResult.Success.class, result);
+        assertThat(result).isInstanceOf(ParsingResult.Success.class);
         Program program = ((ParsingResult.Success) result).program();
         
-        FunctionDeclaration function = program.functionDeclarations().get(0);
-        CodeBlock body = function.body();
+        assertThat(program.functionDeclarations().get(0).body().statements())
+            .first()
+            .isInstanceOf(WhileStatement.class);
         
-        Statement whileStmt = body.statements().get(0);
-        assertInstanceOf(WhileStatement.class, whileStmt);
-        WhileStatement whileLoop = (WhileStatement) whileStmt;
-        assertNotNull(whileLoop.condition());
-        assertInstanceOf(CodeBlock.class, whileLoop.body());
+        WhileStatement whileLoop = (WhileStatement) program.functionDeclarations().get(0).body().statements().get(0);
+        assertThat(whileLoop.condition()).isNotNull();
+        assertThat(whileLoop.body()).isInstanceOf(CodeBlock.class);
     }
 }
