@@ -88,8 +88,7 @@ public class AnalyzerTest {
         assertThat(analyzedProgram.functionDeclarations().get(0).localVariables())
             .hasSize(2)
             .extracting("name")
-            .containsExactlyInAnyOrder("x", "y")
-            .doesNotHaveDuplicates();
+            .containsExactlyInAnyOrder("x", "y");
         
         // Check that variables have unique IDs
         assertThat(analyzedProgram.functionDeclarations().get(0).localVariables())

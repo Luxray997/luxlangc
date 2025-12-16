@@ -34,10 +34,9 @@ public class IRBuilderTest {
                 assertThat(irFunction.basicBlocks())
                     .isNotEmpty()
                     .first()
-                    .satisfies(entryBlock -> {
-                        assertThat(entryBlock).isNotNull();
-                        assertThat(entryBlock.terminator()).isNotNull();
-                    });
+                    .satisfies(entryBlock -> 
+                        assertThat(entryBlock.terminator()).isNotNull()
+                    );
             });
     }
 

@@ -177,9 +177,7 @@ public class ParserTest {
         assertThat(varDecl.type()).isEqualTo(Type.INT);
         assertThat(varDecl.initialValue())
             .isPresent()
-            .hasValueSatisfying(value -> 
-                assertThat(value).isInstanceOf(IntegerLiteral.class)
-            );
+            .hasValueSatisfying(value -> assertThat(value).isInstanceOf(IntegerLiteral.class));
     }
 
     @Test
