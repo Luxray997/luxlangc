@@ -269,10 +269,13 @@ public class LexerTest {
         List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
         assertEquals(expectedKinds, actualKinds);
 
-        // Verify specific identifier lexemes
-        assertEquals("add", tokens.get(1).lexeme());
-        assertEquals("a", tokens.get(4).lexeme());
-        assertEquals("b", tokens.get(7).lexeme());
+        // Verify specific identifier lexemes (function name and parameters)
+        List<String> expectedIdentifierLexemes = List.of("add", "a", "b", "a", "b");
+        List<String> actualIdentifierLexemes = tokens.stream()
+            .filter(t -> t.kind() == TokenKind.IDENTIFIER)
+            .map(Token::lexeme)
+            .toList();
+        assertEquals(expectedIdentifierLexemes, actualIdentifierLexemes);
     }
 
     @Test
@@ -330,11 +333,13 @@ public class LexerTest {
         List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
         assertEquals(expectedKinds, actualKinds);
 
-        // Verify line numbers
-        assertEquals(1, tokens.get(0).line());
-        assertEquals(1, tokens.get(1).line());
-        assertEquals(2, tokens.get(5).line());
-        assertEquals(3, tokens.get(10).line());
+        // Verify line numbers for INT tokens (one per line)
+        List<Integer> expectedIntLines = List.of(1, 2, 3);
+        List<Integer> actualIntLines = tokens.stream()
+            .filter(t -> t.kind() == TokenKind.INT)
+            .map(Token::line)
+            .toList();
+        assertEquals(expectedIntLines, actualIntLines);
     }
 
     @Test
