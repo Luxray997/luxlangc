@@ -12,7 +12,7 @@ public class IRBuilderTest {
     @Test
     public void simple_function() {
         // int main() { return 0; }
-        AnalyzedProgram program = program(
+        AnalyzedProgram input = program(
             function()
                 .returnType(Type.INT)
                 .name("main")
@@ -20,10 +20,10 @@ public class IRBuilderTest {
                 .build()
         );
         
-        IRBuilder builder = new IRBuilder(program);
-        IRModule module = builder.build();
+        IRBuilder builder = new IRBuilder(input);
+        IRModule actual = builder.build();
         
-        assertThat(module.functions())
+        assertThat(actual.functions())
             .hasSize(1)
             .first()
             .satisfies(irFunction -> {
@@ -43,7 +43,7 @@ public class IRBuilderTest {
     @Test
     public void function_with_local_variables() {
         // int main() { int x = 42; return x; }
-        AnalyzedProgram program = program(
+        AnalyzedProgram input = program(
             function()
                 .returnType(Type.INT)
                 .name("main")
@@ -52,14 +52,14 @@ public class IRBuilderTest {
                 .build()
         );
         
-        IRBuilder builder = new IRBuilder(program);
-        IRModule module = builder.build();
+        IRBuilder builder = new IRBuilder(input);
+        IRModule actual = builder.build();
         
-        assertThat(module.functions().get(0).locals())
+        assertThat(actual.functions().get(0).locals())
             .hasSize(1)
             .containsKey("x");
         
-        assertThat(module.functions().get(0).locals().get("x"))
+        assertThat(actual.functions().get(0).locals().get("x"))
             .satisfies(local -> {
                 assertThat(local.name()).isEqualTo("x");
                 assertThat(local.type()).isEqualTo(Type.INT);
@@ -70,7 +70,7 @@ public class IRBuilderTest {
     @Test
     public void function_with_multiple_local_variables() {
         // int main() { int x = 10; int y = 20; return 0; }
-        AnalyzedProgram program = program(
+        AnalyzedProgram input = program(
             function()
                 .returnType(Type.INT)
                 .name("main")
@@ -80,10 +80,10 @@ public class IRBuilderTest {
                 .build()
         );
         
-        IRBuilder builder = new IRBuilder(program);
-        IRModule module = builder.build();
+        IRBuilder builder = new IRBuilder(input);
+        IRModule actual = builder.build();
         
-        assertThat(module.functions().get(0).locals())
+        assertThat(actual.functions().get(0).locals())
             .hasSize(2)
             .containsKeys("x", "y");
     }
@@ -91,7 +91,7 @@ public class IRBuilderTest {
     @Test
     public void multiple_functions() {
         // int foo() { return 1; } int bar() { return 2; }
-        AnalyzedProgram program = program(
+        AnalyzedProgram input = program(
             function()
                 .returnType(Type.INT)
                 .name("foo")
@@ -104,10 +104,10 @@ public class IRBuilderTest {
                 .build()
         );
         
-        IRBuilder builder = new IRBuilder(program);
-        IRModule module = builder.build();
+        IRBuilder builder = new IRBuilder(input);
+        IRModule actual = builder.build();
         
-        assertThat(module.functions())
+        assertThat(actual.functions())
             .hasSize(2)
             .extracting(IRFunction::name)
             .containsExactly("foo", "bar");
@@ -116,7 +116,7 @@ public class IRBuilderTest {
     @Test
     public void void_function() {
         // void empty() { return; }
-        AnalyzedProgram program = program(
+        AnalyzedProgram input = program(
             function()
                 .returnType(Type.VOID)
                 .name("empty")
@@ -124,10 +124,10 @@ public class IRBuilderTest {
                 .build()
         );
         
-        IRBuilder builder = new IRBuilder(program);
-        IRModule module = builder.build();
+        IRBuilder builder = new IRBuilder(input);
+        IRModule actual = builder.build();
         
-        assertThat(module.functions().get(0))
+        assertThat(actual.functions().get(0))
             .satisfies(irFunction -> {
                 assertThat(irFunction.name()).isEqualTo("empty");
                 assertThat(irFunction.returnType()).isEqualTo(Type.VOID);
@@ -139,7 +139,7 @@ public class IRBuilderTest {
     @Test
     public void basic_block_structure() {
         // int main() { return 0; }
-        AnalyzedProgram program = program(
+        AnalyzedProgram input = program(
             function()
                 .returnType(Type.INT)
                 .name("main")
@@ -147,10 +147,10 @@ public class IRBuilderTest {
                 .build()
         );
         
-        IRBuilder builder = new IRBuilder(program);
-        IRModule module = builder.build();
+        IRBuilder builder = new IRBuilder(input);
+        IRModule actual = builder.build();
         
-        assertThat(module.functions().get(0).basicBlocks())
+        assertThat(actual.functions().get(0).basicBlocks())
             .isNotEmpty()
             .first()
             .satisfies(entryBlock -> {

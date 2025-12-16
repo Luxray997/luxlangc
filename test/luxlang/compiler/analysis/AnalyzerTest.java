@@ -12,7 +12,7 @@ public class AnalyzerTest {
     @Test
     public void simple_function() {
         // int main() { return 0; }
-        Program program = program(
+        Program input = program(
             function()
                 .returnType(Type.INT)
                 .name("main")
@@ -20,13 +20,13 @@ public class AnalyzerTest {
                 .build()
         );
         
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult result = analyzer.analyze();
+        Analyzer analyzer = new Analyzer(input);
+        AnalysisResult actual = analyzer.analyze();
         
-        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
-        AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
+        assertThat(actual).isInstanceOf(AnalysisResult.Success.class);
+        AnalyzedProgram actualProgram = ((AnalysisResult.Success) actual).analyzedProgram();
         
-        assertThat(analyzedProgram.functionDeclarations())
+        assertThat(actualProgram.functionDeclarations())
             .hasSize(1)
             .first()
             .satisfies(function -> {
@@ -39,7 +39,7 @@ public class AnalyzerTest {
     @Test
     public void function_with_parameters() {
         // int add(int a, int b) { return 0; }
-        Program program = program(
+        Program input = program(
             function()
                 .returnType(Type.INT)
                 .name("add")
@@ -49,13 +49,13 @@ public class AnalyzerTest {
                 .build()
         );
         
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult result = analyzer.analyze();
+        Analyzer analyzer = new Analyzer(input);
+        AnalysisResult actual = analyzer.analyze();
         
-        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
-        AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
+        assertThat(actual).isInstanceOf(AnalysisResult.Success.class);
+        AnalyzedProgram actualProgram = ((AnalysisResult.Success) actual).analyzedProgram();
         
-        assertThat(analyzedProgram.functionDeclarations().get(0))
+        assertThat(actualProgram.functionDeclarations().get(0))
             .satisfies(function -> {
                 assertThat(function.name()).isEqualTo("add");
                 assertThat(function.parameters()).hasSize(2);
@@ -69,7 +69,7 @@ public class AnalyzerTest {
     @Test
     public void local_variable_tracking() {
         // int main() { int x = 10; int y = 20; return 0; }
-        Program program = program(
+        Program input = program(
             function()
                 .returnType(Type.INT)
                 .name("main")
@@ -79,19 +79,19 @@ public class AnalyzerTest {
                 .build()
         );
         
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult result = analyzer.analyze();
+        Analyzer analyzer = new Analyzer(input);
+        AnalysisResult actual = analyzer.analyze();
         
-        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
-        AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
+        assertThat(actual).isInstanceOf(AnalysisResult.Success.class);
+        AnalyzedProgram actualProgram = ((AnalysisResult.Success) actual).analyzedProgram();
         
-        assertThat(analyzedProgram.functionDeclarations().get(0).localVariables())
+        assertThat(actualProgram.functionDeclarations().get(0).localVariables())
             .hasSize(2)
             .extracting("name")
             .containsExactlyInAnyOrder("x", "y");
         
         // Check that variables have unique IDs
-        assertThat(analyzedProgram.functionDeclarations().get(0).localVariables())
+        assertThat(actualProgram.functionDeclarations().get(0).localVariables())
             .extracting("id")
             .doesNotHaveDuplicates();
     }
@@ -99,7 +99,7 @@ public class AnalyzerTest {
     @Test
     public void multiple_functions() {
         // int foo() { return 1; } int bar() { return 2; }
-        Program program = program(
+        Program input = program(
             function()
                 .returnType(Type.INT)
                 .name("foo")
@@ -112,13 +112,13 @@ public class AnalyzerTest {
                 .build()
         );
         
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult result = analyzer.analyze();
+        Analyzer analyzer = new Analyzer(input);
+        AnalysisResult actual = analyzer.analyze();
         
-        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
-        AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
+        assertThat(actual).isInstanceOf(AnalysisResult.Success.class);
+        AnalyzedProgram actualProgram = ((AnalysisResult.Success) actual).analyzedProgram();
         
-        assertThat(analyzedProgram.functionDeclarations())
+        assertThat(actualProgram.functionDeclarations())
             .hasSize(2)
             .extracting("name")
             .containsExactly("foo", "bar");
@@ -127,7 +127,7 @@ public class AnalyzerTest {
     @Test
     public void void_function() {
         // void empty() { return; }
-        Program program = program(
+        Program input = program(
             function()
                 .returnType(Type.VOID)
                 .name("empty")
@@ -135,13 +135,13 @@ public class AnalyzerTest {
                 .build()
         );
         
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult result = analyzer.analyze();
+        Analyzer analyzer = new Analyzer(input);
+        AnalysisResult actual = analyzer.analyze();
         
-        assertThat(result).isInstanceOf(AnalysisResult.Success.class);
-        AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) result).analyzedProgram();
+        assertThat(actual).isInstanceOf(AnalysisResult.Success.class);
+        AnalyzedProgram actualProgram = ((AnalysisResult.Success) actual).analyzedProgram();
         
-        assertThat(analyzedProgram.functionDeclarations().get(0))
+        assertThat(actualProgram.functionDeclarations().get(0))
             .satisfies(function -> {
                 assertThat(function.name()).isEqualTo("empty");
                 assertThat(function.returnType()).isEqualTo(Type.VOID);

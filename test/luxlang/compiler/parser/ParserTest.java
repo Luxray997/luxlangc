@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static luxlang.compiler.analysis.AnalyzerTestUtils.*;
 import static luxlang.compiler.parser.ParserTestUtils.tokens;
 import static org.assertj.core.api.Assertions.*;
 
@@ -17,7 +18,7 @@ public class ParserTest {
     @Test
     public void simple_function() {
         // int main() { return 0; }
-        List<Token> tokens = tokens()
+        List<Token> input = tokens()
             .keyword(TokenKind.INT)
             .identifier("main")
             .punctuation(TokenKind.LEFT_PAREN)
@@ -33,33 +34,30 @@ public class ParserTest {
             .eof()
             .build();
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .returnValue(intLiteral(0))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations())
-            .hasSize(1)
-            .first()
-            .satisfies(function -> {
-                assertThat(function.name()).isEqualTo("main");
-                assertThat(function.returnType()).isEqualTo(Type.INT);
-                assertThat(function.parameters()).isEmpty();
-                assertThat(function.body())
-                    .isInstanceOf(CodeBlock.class)
-                    .extracting(CodeBlock::statements)
-                    .asList()
-                    .hasSize(1)
-                    .first()
-                    .isInstanceOf(ReturnStatement.class);
-            });
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
+        
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void function_with_parameters() {
         // int add(int a, int b) { return a + b; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "add", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 8),
@@ -79,35 +77,36 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 4, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("add")
+                .param(Type.INT, "a")
+                .param(Type.INT, "b")
+                .returnValue(binaryOp(
+                    luxlang.compiler.parser.nodes.expressions.BinaryOperation.BinaryOperationType.ADD,
+                    varExpr("a"),
+                    varExpr("b")
+                ))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations())
-            .hasSize(1)
-            .first()
-            .satisfies(function -> {
-                assertThat(function.name()).isEqualTo("add");
-                assertThat(function.returnType()).isEqualTo(Type.INT);
-                assertThat(function.parameters())
-                    .hasSize(2)
-                    .satisfies(params -> {
-                        assertThat(params.get(0))
-                            .extracting(Parameter::name, Parameter::type)
-                            .containsExactly("a", Type.INT);
-                        assertThat(params.get(1))
-                            .extracting(Parameter::name, Parameter::type)
-                            .containsExactly("b", Type.INT);
-                    });
-            });
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
+        
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void variable_declaration_without_initializer() {
         // int main() { int x; return 0; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "main", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
@@ -123,27 +122,31 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 5, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(varDecl(Type.INT, "x"))
+                .returnValue(intLiteral(0))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations().get(0).body().statements())
-            .hasSize(2)
-            .first()
-            .isInstanceOf(VariableDeclaration.class);
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
         
-        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
-        assertThat(varDecl.name()).isEqualTo("x");
-        assertThat(varDecl.type()).isEqualTo(Type.INT);
-        assertThat(varDecl.initialValue()).isEmpty();
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void variable_declaration_with_initializer() {
         // int main() { int y = 42; return y; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "main", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
@@ -161,29 +164,31 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 5, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(varDecl(Type.INT, "y", intLiteral("42")))
+                .returnValue(varExpr("y"))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations().get(0).body().statements())
-            .hasSize(2)
-            .first()
-            .isInstanceOf(VariableDeclaration.class);
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
         
-        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
-        assertThat(varDecl.name()).isEqualTo("y");
-        assertThat(varDecl.type()).isEqualTo(Type.INT);
-        assertThat(varDecl.initialValue())
-            .isPresent()
-            .hasValueSatisfying(value -> assertThat(value).isInstanceOf(IntegerLiteral.class));
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void if_statement() {
         // int main() { if (true) { return 1; } return 0; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "main", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
@@ -205,27 +210,31 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 7, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(ifStmt(boolLiteral(true), codeBlock(returnStmt(intLiteral(1)))))
+                .returnValue(intLiteral(0))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations().get(0).body().statements())
-            .hasSize(2)
-            .first()
-            .isInstanceOf(IfStatement.class);
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
         
-        IfStatement ifStmt = (IfStatement) program.functionDeclarations().get(0).body().statements().get(0);
-        assertThat(ifStmt.condition()).isInstanceOf(BooleanLiteral.class);
-        assertThat(ifStmt.body()).isInstanceOf(CodeBlock.class);
-        assertThat(ifStmt.elseBody()).isEmpty();
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void binary_expression() {
         // int main() { int a = 10 + 20; return a; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "main", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
@@ -245,32 +254,35 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 5, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(varDecl(Type.INT, "a", binaryOp(
+                    BinaryOperation.BinaryOperationType.ADD,
+                    intLiteral("10"),
+                    intLiteral("20")
+                )))
+                .returnValue(varExpr("a"))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations().get(0).body().statements())
-            .first()
-            .isInstanceOf(VariableDeclaration.class);
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
         
-        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
-        assertThat(varDecl.initialValue())
-            .isPresent()
-            .hasValueSatisfying(value -> {
-                assertThat(value).isInstanceOf(BinaryOperation.class);
-                BinaryOperation binOp = (BinaryOperation) value;
-                assertThat(binOp.operation()).isEqualTo(BinaryOperation.BinaryOperationType.ADD);
-                assertThat(binOp.left()).isInstanceOf(IntegerLiteral.class);
-                assertThat(binOp.right()).isInstanceOf(IntegerLiteral.class);
-            });
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void unary_expression() {
         // int main() { int x = -5; return x; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "main", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
@@ -289,31 +301,34 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 5, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(varDecl(Type.INT, "x", unaryOp(
+                    UnaryOperation.UnaryOperationType.NEGATION,
+                    intLiteral("5")
+                )))
+                .returnValue(varExpr("x"))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations().get(0).body().statements())
-            .first()
-            .isInstanceOf(VariableDeclaration.class);
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
         
-        VariableDeclaration varDecl = (VariableDeclaration) program.functionDeclarations().get(0).body().statements().get(0);
-        assertThat(varDecl.initialValue())
-            .isPresent()
-            .hasValueSatisfying(value -> {
-                assertThat(value).isInstanceOf(UnaryOperation.class);
-                UnaryOperation unaryOp = (UnaryOperation) value;
-                assertThat(unaryOp.operation()).isEqualTo(UnaryOperation.UnaryOperationType.NEGATION);
-                assertThat(unaryOp.operand()).isInstanceOf(IntegerLiteral.class);
-            });
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void while_loop() {
         // int main() { while (true) { return 1; } return 0; }
-        List<Token> tokens = List.of(
+        List<Token> input = List.of(
             new Token(TokenKind.INT, "int", 1, 1),
             new Token(TokenKind.IDENTIFIER, "main", 1, 5),
             new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
@@ -335,18 +350,24 @@ public class ParserTest {
             new Token(TokenKind.EOF, "", 7, 1)
         );
         
-        Parser parser = new Parser(tokens);
-        ParsingResult result = parser.parse();
+        Program expected = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(whileStmt(boolLiteral(true), codeBlock(returnStmt(intLiteral(1)))))
+                .returnValue(intLiteral(0))
+                .build()
+        );
         
-        assertThat(result).isInstanceOf(ParsingResult.Success.class);
-        Program program = ((ParsingResult.Success) result).program();
+        Parser parser = new Parser(input);
+        ParsingResult actual = parser.parse();
         
-        assertThat(program.functionDeclarations().get(0).body().statements())
-            .first()
-            .isInstanceOf(WhileStatement.class);
+        assertThat(actual).isInstanceOf(ParsingResult.Success.class);
+        Program actualProgram = ((ParsingResult.Success) actual).program();
         
-        WhileStatement whileLoop = (WhileStatement) program.functionDeclarations().get(0).body().statements().get(0);
-        assertThat(whileLoop.condition()).isNotNull();
-        assertThat(whileLoop.body()).isInstanceOf(CodeBlock.class);
+        assertThat(actualProgram)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 }

@@ -29,6 +29,29 @@ public class AnalyzerTestUtils {
         return intLiteral(String.valueOf(value));
     }
     
+    public static luxlang.compiler.parser.nodes.expressions.BinaryOperation binaryOp(
+            luxlang.compiler.parser.nodes.expressions.BinaryOperation.BinaryOperationType operation,
+            Expression left, Expression right) {
+        return new luxlang.compiler.parser.nodes.expressions.BinaryOperation(operation, left, right, TestUtils.dummySourceInfo());
+    }
+    
+    public static luxlang.compiler.parser.nodes.expressions.UnaryOperation unaryOp(
+            luxlang.compiler.parser.nodes.expressions.UnaryOperation.UnaryOperationType operation,
+            Expression operand) {
+        return new luxlang.compiler.parser.nodes.expressions.UnaryOperation(operation, operand, TestUtils.dummySourceInfo());
+    }
+    
+    public static luxlang.compiler.parser.nodes.expressions.VariableExpression varExpr(String name) {
+        return new luxlang.compiler.parser.nodes.expressions.VariableExpression(name, TestUtils.dummySourceInfo());
+    }
+    
+    public static luxlang.compiler.parser.nodes.expressions.BooleanLiteral boolLiteral(boolean value) {
+        luxlang.compiler.parser.nodes.expressions.BooleanLiteral.Value enumValue = 
+            value ? luxlang.compiler.parser.nodes.expressions.BooleanLiteral.Value.TRUE 
+                  : luxlang.compiler.parser.nodes.expressions.BooleanLiteral.Value.FALSE;
+        return new luxlang.compiler.parser.nodes.expressions.BooleanLiteral(enumValue, TestUtils.dummySourceInfo());
+    }
+    
     // Statement builders
     
     public static ReturnStatement returnStmt(Expression value) {
@@ -49,6 +72,18 @@ public class AnalyzerTestUtils {
     
     public static CodeBlock codeBlock(Statement... statements) {
         return new CodeBlock(List.of(statements), TestUtils.dummySourceInfo());
+    }
+    
+    public static luxlang.compiler.parser.nodes.statements.IfStatement ifStmt(Expression condition, CodeBlock body) {
+        return new luxlang.compiler.parser.nodes.statements.IfStatement(condition, body, Optional.empty(), TestUtils.dummySourceInfo());
+    }
+    
+    public static luxlang.compiler.parser.nodes.statements.IfStatement ifStmt(Expression condition, CodeBlock body, CodeBlock elseBody) {
+        return new luxlang.compiler.parser.nodes.statements.IfStatement(condition, body, Optional.of(elseBody), TestUtils.dummySourceInfo());
+    }
+    
+    public static luxlang.compiler.parser.nodes.statements.WhileStatement whileStmt(Expression condition, CodeBlock body) {
+        return new luxlang.compiler.parser.nodes.statements.WhileStatement(condition, body, TestUtils.dummySourceInfo());
     }
     
     // Parameter builders
