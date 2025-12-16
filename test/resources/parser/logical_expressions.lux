@@ -1,0 +1,6 @@
+int main() {
+    bool a = true && false;
+    bool b = true || false;
+    bool c = !false;
+    return 0;
+}

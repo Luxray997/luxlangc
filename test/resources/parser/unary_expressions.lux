@@ -1,0 +1,6 @@
+int main() {
+    int x = -5;
+    bool y = !true;
+    int z = ~10;
+    return x;
+}

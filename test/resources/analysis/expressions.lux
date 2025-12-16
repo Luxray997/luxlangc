@@ -1,0 +1,6 @@
+int main() {
+    int a = 5 + 10 * 2;
+    int b = (5 + 10) * 2;
+    bool c = (a > b) && (b < 100);
+    return a + b;
+}
