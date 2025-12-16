@@ -21,20 +21,14 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(13, tokens.size()); // 12 keywords + EOF
-        assertEquals(TokenKind.VOID, tokens.get(0).kind());
-        assertEquals(TokenKind.BOOL, tokens.get(1).kind());
-        assertEquals(TokenKind.BYTE, tokens.get(2).kind());
-        assertEquals(TokenKind.UBYTE, tokens.get(3).kind());
-        assertEquals(TokenKind.SHORT, tokens.get(4).kind());
-        assertEquals(TokenKind.USHORT, tokens.get(5).kind());
-        assertEquals(TokenKind.INT, tokens.get(6).kind());
-        assertEquals(TokenKind.UINT, tokens.get(7).kind());
-        assertEquals(TokenKind.LONG, tokens.get(8).kind());
-        assertEquals(TokenKind.ULONG, tokens.get(9).kind());
-        assertEquals(TokenKind.FLOAT, tokens.get(10).kind());
-        assertEquals(TokenKind.DOUBLE, tokens.get(11).kind());
-        assertEquals(TokenKind.EOF, tokens.get(12).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.VOID, TokenKind.BOOL, TokenKind.BYTE, TokenKind.UBYTE,
+            TokenKind.SHORT, TokenKind.USHORT, TokenKind.INT, TokenKind.UINT,
+            TokenKind.LONG, TokenKind.ULONG, TokenKind.FLOAT, TokenKind.DOUBLE,
+            TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -46,14 +40,12 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(7, tokens.size()); // 6 keywords + EOF
-        assertEquals(TokenKind.IF, tokens.get(0).kind());
-        assertEquals(TokenKind.ELSE, tokens.get(1).kind());
-        assertEquals(TokenKind.DO, tokens.get(2).kind());
-        assertEquals(TokenKind.WHILE, tokens.get(3).kind());
-        assertEquals(TokenKind.FOR, tokens.get(4).kind());
-        assertEquals(TokenKind.RETURN, tokens.get(5).kind());
-        assertEquals(TokenKind.EOF, tokens.get(6).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.IF, TokenKind.ELSE, TokenKind.DO, TokenKind.WHILE,
+            TokenKind.FOR, TokenKind.RETURN, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -65,10 +57,9 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(3, tokens.size()); // 2 keywords + EOF
-        assertEquals(TokenKind.TRUE, tokens.get(0).kind());
-        assertEquals(TokenKind.FALSE, tokens.get(1).kind());
-        assertEquals(TokenKind.EOF, tokens.get(2).kind());
+        List<TokenKind> expectedKinds = List.of(TokenKind.TRUE, TokenKind.FALSE, TokenKind.EOF);
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -80,18 +71,16 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(6, tokens.size()); // 5 identifiers + EOF
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(0).kind());
-        assertEquals("x", tokens.get(0).lexeme());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(1).kind());
-        assertEquals("myVar", tokens.get(1).lexeme());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(2).kind());
-        assertEquals("var123", tokens.get(2).lexeme());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(3).kind());
-        assertEquals("test_var", tokens.get(3).lexeme());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(4).kind());
-        assertEquals("identifier", tokens.get(4).lexeme());
-        assertEquals(TokenKind.EOF, tokens.get(5).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.IDENTIFIER, TokenKind.IDENTIFIER, TokenKind.IDENTIFIER,
+            TokenKind.IDENTIFIER, TokenKind.IDENTIFIER, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
+
+        List<String> expectedLexemes = List.of("x", "myVar", "var123", "test_var", "identifier");
+        List<String> actualLexemes = tokens.stream().limit(5).map(Token::lexeme).toList();
+        assertEquals(expectedLexemes, actualLexemes);
     }
 
     @Test
@@ -103,21 +92,20 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(11, tokens.size()); // 10 integer literals + EOF
-        for (int i = 0; i < 10; i++) {
-            assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(i).kind());
-        }
-        assertEquals("42", tokens.get(0).lexeme());
-        assertEquals("0", tokens.get(1).lexeme());
-        assertEquals("123", tokens.get(2).lexeme());
-        assertEquals("456u", tokens.get(3).lexeme());
-        assertEquals("789l", tokens.get(4).lexeme());
-        assertEquals("100ul", tokens.get(5).lexeme());
-        assertEquals("50s", tokens.get(6).lexeme());
-        assertEquals("25us", tokens.get(7).lexeme());
-        assertEquals("10b", tokens.get(8).lexeme());
-        assertEquals("5ub", tokens.get(9).lexeme());
-        assertEquals(TokenKind.EOF, tokens.get(10).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.LITERAL_INTEGER, TokenKind.LITERAL_INTEGER, TokenKind.LITERAL_INTEGER,
+            TokenKind.LITERAL_INTEGER, TokenKind.LITERAL_INTEGER, TokenKind.LITERAL_INTEGER,
+            TokenKind.LITERAL_INTEGER, TokenKind.LITERAL_INTEGER, TokenKind.LITERAL_INTEGER,
+            TokenKind.LITERAL_INTEGER, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
+
+        List<String> expectedLexemes = List.of(
+            "42", "0", "123", "456u", "789l", "100ul", "50s", "25us", "10b", "5ub"
+        );
+        List<String> actualLexemes = tokens.stream().limit(10).map(Token::lexeme).toList();
+        assertEquals(expectedLexemes, actualLexemes);
     }
 
     @Test
@@ -129,19 +117,19 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(9, tokens.size()); // 8 floating point literals + EOF
-        for (int i = 0; i < 8; i++) {
-            assertEquals(TokenKind.LITERAL_FLOATINGPT, tokens.get(i).kind());
-        }
-        assertEquals("3.14", tokens.get(0).lexeme());
-        assertEquals("0.5", tokens.get(1).lexeme());
-        assertEquals("2.0f", tokens.get(2).lexeme());
-        assertEquals("1.5d", tokens.get(3).lexeme());
-        assertEquals("42.0F", tokens.get(4).lexeme());
-        assertEquals("99.9D", tokens.get(5).lexeme());
-        assertEquals(".5", tokens.get(6).lexeme());
-        assertEquals(".25f", tokens.get(7).lexeme());
-        assertEquals(TokenKind.EOF, tokens.get(8).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.LITERAL_FLOATINGPT, TokenKind.LITERAL_FLOATINGPT, TokenKind.LITERAL_FLOATINGPT,
+            TokenKind.LITERAL_FLOATINGPT, TokenKind.LITERAL_FLOATINGPT, TokenKind.LITERAL_FLOATINGPT,
+            TokenKind.LITERAL_FLOATINGPT, TokenKind.LITERAL_FLOATINGPT, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
+
+        List<String> expectedLexemes = List.of(
+            "3.14", "0.5", "2.0f", "1.5d", "42.0F", "99.9D", ".5", ".25f"
+        );
+        List<String> actualLexemes = tokens.stream().limit(8).map(Token::lexeme).toList();
+        assertEquals(expectedLexemes, actualLexemes);
     }
 
     @Test
@@ -153,13 +141,11 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(6, tokens.size()); // 5 operators + EOF
-        assertEquals(TokenKind.ADD, tokens.get(0).kind());
-        assertEquals(TokenKind.SUB, tokens.get(1).kind());
-        assertEquals(TokenKind.MULT, tokens.get(2).kind());
-        assertEquals(TokenKind.DIV, tokens.get(3).kind());
-        assertEquals(TokenKind.MOD, tokens.get(4).kind());
-        assertEquals(TokenKind.EOF, tokens.get(5).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.ADD, TokenKind.SUB, TokenKind.MULT, TokenKind.DIV, TokenKind.MOD, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -171,11 +157,11 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(4, tokens.size()); // 3 operators + EOF
-        assertEquals(TokenKind.LOGICAL_NOT, tokens.get(0).kind());
-        assertEquals(TokenKind.LOGICAL_AND, tokens.get(1).kind());
-        assertEquals(TokenKind.LOGICAL_OR, tokens.get(2).kind());
-        assertEquals(TokenKind.EOF, tokens.get(3).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.LOGICAL_NOT, TokenKind.LOGICAL_AND, TokenKind.LOGICAL_OR, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -187,12 +173,12 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(5, tokens.size()); // 4 operators + EOF
-        assertEquals(TokenKind.BITWISE_NOT, tokens.get(0).kind());
-        assertEquals(TokenKind.BITWISE_AND, tokens.get(1).kind());
-        assertEquals(TokenKind.BITWISE_OR, tokens.get(2).kind());
-        assertEquals(TokenKind.BITWISE_XOR, tokens.get(3).kind());
-        assertEquals(TokenKind.EOF, tokens.get(4).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.BITWISE_NOT, TokenKind.BITWISE_AND, TokenKind.BITWISE_OR,
+            TokenKind.BITWISE_XOR, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -204,14 +190,12 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(7, tokens.size()); // 6 operators + EOF
-        assertEquals(TokenKind.EQUAL, tokens.get(0).kind());
-        assertEquals(TokenKind.NOT_EQUAL, tokens.get(1).kind());
-        assertEquals(TokenKind.LESS, tokens.get(2).kind());
-        assertEquals(TokenKind.LESS_EQUAL, tokens.get(3).kind());
-        assertEquals(TokenKind.GREATER, tokens.get(4).kind());
-        assertEquals(TokenKind.GREATER_EQUAL, tokens.get(5).kind());
-        assertEquals(TokenKind.EOF, tokens.get(6).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.EQUAL, TokenKind.NOT_EQUAL, TokenKind.LESS, TokenKind.LESS_EQUAL,
+            TokenKind.GREATER, TokenKind.GREATER_EQUAL, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -223,9 +207,9 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(2, tokens.size()); // 1 operator + EOF
-        assertEquals(TokenKind.ASSIGN, tokens.get(0).kind());
-        assertEquals(TokenKind.EOF, tokens.get(1).kind());
+        List<TokenKind> expectedKinds = List.of(TokenKind.ASSIGN, TokenKind.EOF);
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -237,14 +221,12 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(7, tokens.size()); // 6 punctuation + EOF
-        assertEquals(TokenKind.LEFT_PAREN, tokens.get(0).kind());
-        assertEquals(TokenKind.RIGHT_PAREN, tokens.get(1).kind());
-        assertEquals(TokenKind.LEFT_BRACE, tokens.get(2).kind());
-        assertEquals(TokenKind.RIGHT_BRACE, tokens.get(3).kind());
-        assertEquals(TokenKind.SEMICOLON, tokens.get(4).kind());
-        assertEquals(TokenKind.COMMA, tokens.get(5).kind());
-        assertEquals(TokenKind.EOF, tokens.get(6).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.LEFT_PAREN, TokenKind.RIGHT_PAREN, TokenKind.LEFT_BRACE,
+            TokenKind.RIGHT_BRACE, TokenKind.SEMICOLON, TokenKind.COMMA, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -256,28 +238,16 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(21, tokens.size());
-        assertEquals(TokenKind.INT, tokens.get(0).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(1).kind());
-        assertEquals(TokenKind.ASSIGN, tokens.get(2).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(3).kind());
-        assertEquals(TokenKind.SEMICOLON, tokens.get(4).kind());
-        assertEquals(TokenKind.IF, tokens.get(5).kind());
-        assertEquals(TokenKind.LEFT_PAREN, tokens.get(6).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(7).kind());
-        assertEquals(TokenKind.GREATER, tokens.get(8).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(9).kind());
-        assertEquals(TokenKind.RIGHT_PAREN, tokens.get(10).kind());
-        assertEquals(TokenKind.LEFT_BRACE, tokens.get(11).kind());
-        assertEquals(TokenKind.RETURN, tokens.get(12).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(13).kind());
-        assertEquals(TokenKind.MULT, tokens.get(14).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(15).kind());
-        assertEquals(TokenKind.ADD, tokens.get(16).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(17).kind());
-        assertEquals(TokenKind.SEMICOLON, tokens.get(18).kind());
-        assertEquals(TokenKind.RIGHT_BRACE, tokens.get(19).kind());
-        assertEquals(TokenKind.EOF, tokens.get(20).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.INT, TokenKind.IDENTIFIER, TokenKind.ASSIGN, TokenKind.LITERAL_INTEGER,
+            TokenKind.SEMICOLON, TokenKind.IF, TokenKind.LEFT_PAREN, TokenKind.IDENTIFIER,
+            TokenKind.GREATER, TokenKind.LITERAL_INTEGER, TokenKind.RIGHT_PAREN, TokenKind.LEFT_BRACE,
+            TokenKind.RETURN, TokenKind.IDENTIFIER, TokenKind.MULT, TokenKind.LITERAL_INTEGER,
+            TokenKind.ADD, TokenKind.LITERAL_INTEGER, TokenKind.SEMICOLON, TokenKind.RIGHT_BRACE,
+            TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -289,29 +259,20 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(17, tokens.size());
-        assertEquals(TokenKind.INT, tokens.get(0).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(1).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.INT, TokenKind.IDENTIFIER, TokenKind.LEFT_PAREN, TokenKind.INT,
+            TokenKind.IDENTIFIER, TokenKind.COMMA, TokenKind.INT, TokenKind.IDENTIFIER,
+            TokenKind.RIGHT_PAREN, TokenKind.LEFT_BRACE, TokenKind.RETURN, TokenKind.IDENTIFIER,
+            TokenKind.ADD, TokenKind.IDENTIFIER, TokenKind.SEMICOLON, TokenKind.RIGHT_BRACE,
+            TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
+
+        // Verify specific identifier lexemes
         assertEquals("add", tokens.get(1).lexeme());
-        assertEquals(TokenKind.LEFT_PAREN, tokens.get(2).kind());
-        assertEquals(TokenKind.INT, tokens.get(3).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(4).kind());
         assertEquals("a", tokens.get(4).lexeme());
-        assertEquals(TokenKind.COMMA, tokens.get(5).kind());
-        assertEquals(TokenKind.INT, tokens.get(6).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(7).kind());
         assertEquals("b", tokens.get(7).lexeme());
-        assertEquals(TokenKind.RIGHT_PAREN, tokens.get(8).kind());
-        assertEquals(TokenKind.LEFT_BRACE, tokens.get(9).kind());
-        assertEquals(TokenKind.RETURN, tokens.get(10).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(11).kind());
-        assertEquals("a", tokens.get(11).lexeme());
-        assertEquals(TokenKind.ADD, tokens.get(12).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(13).kind());
-        assertEquals("b", tokens.get(13).lexeme());
-        assertEquals(TokenKind.SEMICOLON, tokens.get(14).kind());
-        assertEquals(TokenKind.RIGHT_BRACE, tokens.get(15).kind());
-        assertEquals(TokenKind.EOF, tokens.get(16).kind());
     }
 
     @Test
@@ -323,27 +284,15 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(20, tokens.size());
-        assertEquals(TokenKind.BOOL, tokens.get(0).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(1).kind());
-        assertEquals(TokenKind.ASSIGN, tokens.get(2).kind());
-        assertEquals(TokenKind.LEFT_PAREN, tokens.get(3).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(4).kind());
-        assertEquals(TokenKind.GREATER_EQUAL, tokens.get(5).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(6).kind());
-        assertEquals(TokenKind.LOGICAL_AND, tokens.get(7).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(8).kind());
-        assertEquals(TokenKind.LESS, tokens.get(9).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(10).kind());
-        assertEquals(TokenKind.RIGHT_PAREN, tokens.get(11).kind());
-        assertEquals(TokenKind.LOGICAL_OR, tokens.get(12).kind());
-        assertEquals(TokenKind.LEFT_PAREN, tokens.get(13).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(14).kind());
-        assertEquals(TokenKind.EQUAL, tokens.get(15).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(16).kind());
-        assertEquals(TokenKind.RIGHT_PAREN, tokens.get(17).kind());
-        assertEquals(TokenKind.SEMICOLON, tokens.get(18).kind());
-        assertEquals(TokenKind.EOF, tokens.get(19).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.BOOL, TokenKind.IDENTIFIER, TokenKind.ASSIGN, TokenKind.LEFT_PAREN,
+            TokenKind.IDENTIFIER, TokenKind.GREATER_EQUAL, TokenKind.LITERAL_INTEGER, TokenKind.LOGICAL_AND,
+            TokenKind.IDENTIFIER, TokenKind.LESS, TokenKind.LITERAL_INTEGER, TokenKind.RIGHT_PAREN,
+            TokenKind.LOGICAL_OR, TokenKind.LEFT_PAREN, TokenKind.IDENTIFIER, TokenKind.EQUAL,
+            TokenKind.LITERAL_INTEGER, TokenKind.RIGHT_PAREN, TokenKind.SEMICOLON, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -355,13 +304,12 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(6, tokens.size());
-        assertEquals(TokenKind.INT, tokens.get(0).kind());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(1).kind());
-        assertEquals(TokenKind.ASSIGN, tokens.get(2).kind());
-        assertEquals(TokenKind.LITERAL_INTEGER, tokens.get(3).kind());
-        assertEquals(TokenKind.SEMICOLON, tokens.get(4).kind());
-        assertEquals(TokenKind.EOF, tokens.get(5).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.INT, TokenKind.IDENTIFIER, TokenKind.ASSIGN,
+            TokenKind.LITERAL_INTEGER, TokenKind.SEMICOLON, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
@@ -373,20 +321,20 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(18, tokens.size());
-        // First line
-        assertEquals(TokenKind.INT, tokens.get(0).kind());
+        List<TokenKind> expectedKinds = List.of(
+            TokenKind.INT, TokenKind.IDENTIFIER, TokenKind.ASSIGN, TokenKind.LITERAL_INTEGER, TokenKind.SEMICOLON,
+            TokenKind.INT, TokenKind.IDENTIFIER, TokenKind.ASSIGN, TokenKind.LITERAL_INTEGER, TokenKind.SEMICOLON,
+            TokenKind.INT, TokenKind.IDENTIFIER, TokenKind.ASSIGN, TokenKind.IDENTIFIER, TokenKind.ADD,
+            TokenKind.IDENTIFIER, TokenKind.SEMICOLON, TokenKind.EOF
+        );
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
+
+        // Verify line numbers
         assertEquals(1, tokens.get(0).line());
-        assertEquals(TokenKind.IDENTIFIER, tokens.get(1).kind());
         assertEquals(1, tokens.get(1).line());
-        // Second line
-        assertEquals(TokenKind.INT, tokens.get(5).kind());
         assertEquals(2, tokens.get(5).line());
-        // Third line
-        assertEquals(TokenKind.INT, tokens.get(10).kind());
         assertEquals(3, tokens.get(10).line());
-        // EOF
-        assertEquals(TokenKind.EOF, tokens.get(17).kind());
     }
 
     @Test
@@ -398,8 +346,9 @@ public class LexerTest {
         assertInstanceOf(LexingResult.Success.class, result);
         List<Token> tokens = ((LexingResult.Success) result).tokens();
 
-        assertEquals(1, tokens.size());
-        assertEquals(TokenKind.EOF, tokens.get(0).kind());
+        List<TokenKind> expectedKinds = List.of(TokenKind.EOF);
+        List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
+        assertEquals(expectedKinds, actualKinds);
     }
 
     @Test
