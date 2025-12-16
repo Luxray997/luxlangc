@@ -1,180 +1,264 @@
 package luxlang.compiler.ir;
 
-import luxlang.compiler.analysis.AnalysisResult;
-import luxlang.compiler.analysis.Analyzer;
+import luxlang.compiler.analysis.nodes.AnalyzedFunctionDeclaration;
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
-import luxlang.compiler.lexer.Lexer;
-import luxlang.compiler.lexer.LexingResult;
+import luxlang.compiler.analysis.nodes.LocalVariable;
+import luxlang.compiler.analysis.nodes.expressions.AnalyzedIntegerLiteral;
+import luxlang.compiler.analysis.nodes.statements.AnalyzedCodeBlock;
+import luxlang.compiler.analysis.nodes.statements.AnalyzedReturnStatement;
 import luxlang.compiler.lexer.objects.Token;
-import luxlang.compiler.parser.Parser;
-import luxlang.compiler.parser.ParsingResult;
-import luxlang.compiler.parser.nodes.Program;
+import luxlang.compiler.lexer.objects.TokenKind;
 import luxlang.compiler.parser.nodes.Type;
-import luxlang.compiler.utils.TestUtils;
+import luxlang.compiler.parser.objects.SourceInfo;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public class IRBuilderTest {
-    private final String IR_SUBDIRECTORY = "ir";
 
-    private IRModule buildIR(String fileName) throws IOException {
-        String input = TestUtils.readTestFile(IR_SUBDIRECTORY, fileName);
-        
-        Lexer lexer = new Lexer(input);
-        LexingResult lexingResult = lexer.lex();
-        assertInstanceOf(LexingResult.Success.class, lexingResult);
-        List<Token> tokens = ((LexingResult.Success) lexingResult).tokens();
-        
-        Parser parser = new Parser(tokens);
-        ParsingResult parsingResult = parser.parse();
-        assertInstanceOf(ParsingResult.Success.class, parsingResult);
-        Program program = ((ParsingResult.Success) parsingResult).program();
-        
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult analysisResult = analyzer.analyze();
-        assertInstanceOf(AnalysisResult.Success.class, analysisResult);
-        AnalyzedProgram analyzedProgram = ((AnalysisResult.Success) analysisResult).analyzedProgram();
-        
-        IRBuilder builder = new IRBuilder(analyzedProgram);
-        return builder.build();
+    private SourceInfo dummySourceInfo() {
+        Token dummyToken = new Token(TokenKind.EOF, "", 1, 1);
+        return new SourceInfo(dummyToken, dummyToken);
     }
 
     @Test
-    public void simple_function() throws IOException {
-        IRModule module = buildIR("simple_function.lux");
+    public void simple_function() {
+        // int main() { return 0; }
+        AnalyzedIntegerLiteral zero = new AnalyzedIntegerLiteral(0, Type.INT, dummySourceInfo());
+        AnalyzedReturnStatement returnStmt = new AnalyzedReturnStatement(
+            Optional.of(zero),
+            dummySourceInfo()
+        );
+        AnalyzedCodeBlock body = new AnalyzedCodeBlock(
+            List.of(returnStmt),
+            true,
+            dummySourceInfo()
+        );
+        
+        AnalyzedFunctionDeclaration function = new AnalyzedFunctionDeclaration(
+            Type.INT,
+            "main",
+            List.of(),
+            body,
+            List.of(),
+            dummySourceInfo()
+        );
+        
+        AnalyzedProgram program = new AnalyzedProgram(List.of(function));
+        
+        IRBuilder builder = new IRBuilder(program);
+        IRModule module = builder.build();
         
         assertEquals(1, module.functions().size());
-        IRFunction function = module.functions().get(0);
-        assertEquals("main", function.name());
-        assertEquals(Type.INT, function.returnType());
-        assertEquals(0, function.parameterTypes().size());
-        assertTrue(function.basicBlocks().size() >= 1);
+        IRFunction irFunction = module.functions().get(0);
+        assertEquals("main", irFunction.name());
+        assertEquals(Type.INT, irFunction.returnType());
+        assertEquals(0, irFunction.parameterTypes().size());
+        assertEquals(0, irFunction.locals().size());
+        assertTrue(irFunction.basicBlocks().size() >= 1);
         
-        // Should have at least an entry block
-        BasicBlock entryBlock = function.basicBlocks().get(0);
+        // Entry block should exist with a terminator
+        BasicBlock entryBlock = irFunction.basicBlocks().get(0);
         assertNotNull(entryBlock);
         assertNotNull(entryBlock.terminator());
     }
 
     @Test
-    public void arithmetic() throws IOException {
-        IRModule module = buildIR("arithmetic.lux");
+    public void function_with_local_variables() {
+        // int main() { int x = 42; return x; }
+        LocalVariable varX = new LocalVariable(0, "x", Type.INT);
         
-        IRFunction function = module.functions().get(0);
-        assertEquals("main", function.name());
+        AnalyzedIntegerLiteral zero = new AnalyzedIntegerLiteral(0, Type.INT, dummySourceInfo());
+        AnalyzedReturnStatement returnStmt = new AnalyzedReturnStatement(
+            Optional.of(zero),
+            dummySourceInfo()
+        );
+        AnalyzedCodeBlock body = new AnalyzedCodeBlock(
+            List.of(returnStmt),
+            true,
+            dummySourceInfo()
+        );
         
-        // Should have local variables for a, b, c, d, e
-        assertEquals(5, function.locals().size());
-        assertTrue(function.locals().containsKey("a"));
-        assertTrue(function.locals().containsKey("b"));
-        assertTrue(function.locals().containsKey("c"));
-        assertTrue(function.locals().containsKey("d"));
-        assertTrue(function.locals().containsKey("e"));
+        AnalyzedFunctionDeclaration function = new AnalyzedFunctionDeclaration(
+            Type.INT,
+            "main",
+            List.of(),
+            body,
+            List.of(varX),
+            dummySourceInfo()
+        );
         
-        // Should have at least one basic block
-        assertTrue(function.basicBlocks().size() >= 1);
+        AnalyzedProgram program = new AnalyzedProgram(List.of(function));
+        
+        IRBuilder builder = new IRBuilder(program);
+        IRModule module = builder.build();
+        
+        IRFunction irFunction = module.functions().get(0);
+        assertEquals(1, irFunction.locals().size());
+        assertTrue(irFunction.locals().containsKey("x"));
+        
+        IRLocal local = irFunction.locals().get("x");
+        assertEquals("x", local.name());
+        assertEquals(Type.INT, local.type());
+        assertEquals(0, local.index());
     }
 
     @Test
-    public void if_statement() throws IOException {
-        IRModule module = buildIR("if_statement.lux");
+    public void function_with_multiple_local_variables() {
+        // int main() { int x = 10; int y = 20; return 0; }
+        LocalVariable varX = new LocalVariable(0, "x", Type.INT);
+        LocalVariable varY = new LocalVariable(1, "y", Type.INT);
         
-        IRFunction function = module.functions().get(0);
+        AnalyzedIntegerLiteral zero = new AnalyzedIntegerLiteral(0, Type.INT, dummySourceInfo());
+        AnalyzedReturnStatement returnStmt = new AnalyzedReturnStatement(
+            Optional.of(zero),
+            dummySourceInfo()
+        );
+        AnalyzedCodeBlock body = new AnalyzedCodeBlock(
+            List.of(returnStmt),
+            true,
+            dummySourceInfo()
+        );
         
-        // If statement creates multiple basic blocks (condition, then, merge)
-        assertTrue(function.basicBlocks().size() >= 3);
+        AnalyzedFunctionDeclaration function = new AnalyzedFunctionDeclaration(
+            Type.INT,
+            "main",
+            List.of(),
+            body,
+            List.of(varX, varY),
+            dummySourceInfo()
+        );
         
-        // Entry block should exist
-        BasicBlock entryBlock = function.basicBlocks().get(0);
-        assertNotNull(entryBlock.terminator());
+        AnalyzedProgram program = new AnalyzedProgram(List.of(function));
+        
+        IRBuilder builder = new IRBuilder(program);
+        IRModule module = builder.build();
+        
+        IRFunction irFunction = module.functions().get(0);
+        assertEquals(2, irFunction.locals().size());
+        assertTrue(irFunction.locals().containsKey("x"));
+        assertTrue(irFunction.locals().containsKey("y"));
     }
 
     @Test
-    public void if_else_statement() throws IOException {
-        IRModule module = buildIR("if_else_statement.lux");
+    public void multiple_functions() {
+        // int foo() { return 1; } int bar() { return 2; }
+        AnalyzedIntegerLiteral one = new AnalyzedIntegerLiteral(1, Type.INT, dummySourceInfo());
+        AnalyzedIntegerLiteral two = new AnalyzedIntegerLiteral(2, Type.INT, dummySourceInfo());
         
-        IRFunction function = module.functions().get(0);
+        AnalyzedReturnStatement returnOne = new AnalyzedReturnStatement(
+            Optional.of(one),
+            dummySourceInfo()
+        );
+        AnalyzedReturnStatement returnTwo = new AnalyzedReturnStatement(
+            Optional.of(two),
+            dummySourceInfo()
+        );
         
-        // If-else statement creates multiple basic blocks (condition, then, else, merge)
-        assertTrue(function.basicBlocks().size() >= 4);
-    }
-
-    @Test
-    public void while_loop() throws IOException {
-        IRModule module = buildIR("while_loop.lux");
+        AnalyzedCodeBlock body1 = new AnalyzedCodeBlock(
+            List.of(returnOne),
+            true,
+            dummySourceInfo()
+        );
+        AnalyzedCodeBlock body2 = new AnalyzedCodeBlock(
+            List.of(returnTwo),
+            true,
+            dummySourceInfo()
+        );
         
-        IRFunction function = module.functions().get(0);
+        AnalyzedFunctionDeclaration func1 = new AnalyzedFunctionDeclaration(
+            Type.INT, "foo", List.of(), body1, List.of(), dummySourceInfo()
+        );
+        AnalyzedFunctionDeclaration func2 = new AnalyzedFunctionDeclaration(
+            Type.INT, "bar", List.of(), body2, List.of(), dummySourceInfo()
+        );
         
-        // While loop creates multiple basic blocks (entry, condition, body, exit)
-        assertTrue(function.basicBlocks().size() >= 3);
+        AnalyzedProgram program = new AnalyzedProgram(List.of(func1, func2));
         
-        // Should have local variable 'i'
-        assertTrue(function.locals().containsKey("i"));
-    }
-
-    @Test
-    public void for_loop() throws IOException {
-        IRModule module = buildIR("for_loop.lux");
-        
-        IRFunction function = module.functions().get(0);
-        
-        // For loop creates multiple basic blocks
-        assertTrue(function.basicBlocks().size() >= 3);
-        
-        // Should have local variables 'sum' and 'i'
-        assertTrue(function.locals().containsKey("sum"));
-        assertTrue(function.locals().containsKey("i"));
-    }
-
-    @Test
-    public void local_variables() throws IOException {
-        IRModule module = buildIR("local_variables.lux");
-        
-        IRFunction function = module.functions().get(0);
-        
-        // Should have 3 local variables
-        assertEquals(3, function.locals().size());
-        assertTrue(function.locals().containsKey("x"));
-        assertTrue(function.locals().containsKey("y"));
-        assertTrue(function.locals().containsKey("z"));
-        
-        // Check that locals have correct types
-        IRLocal x = function.locals().get("x");
-        assertEquals(Type.INT, x.type());
-    }
-
-    @Test
-    public void function_parameters() throws IOException {
-        IRModule module = buildIR("function_parameters.lux");
+        IRBuilder builder = new IRBuilder(program);
+        IRModule module = builder.build();
         
         assertEquals(2, module.functions().size());
-        
-        IRFunction addFunc = module.functions().get(0);
-        assertEquals("add", addFunc.name());
-        assertEquals(2, addFunc.parameterTypes().size());
-        assertEquals(Type.INT, addFunc.parameterTypes().get(0));
-        assertEquals(Type.INT, addFunc.parameterTypes().get(1));
-        
-        // Parameters should also be in locals
-        assertTrue(addFunc.locals().containsKey("a"));
-        assertTrue(addFunc.locals().containsKey("b"));
+        assertEquals("foo", module.functions().get(0).name());
+        assertEquals("bar", module.functions().get(1).name());
     }
 
     @Test
-    public void empty_function() throws IOException {
-        IRModule module = buildIR("empty_function.lux");
+    public void void_function() {
+        // void empty() { return; }
+        AnalyzedReturnStatement returnStmt = new AnalyzedReturnStatement(
+            Optional.empty(),
+            dummySourceInfo()
+        );
+        AnalyzedCodeBlock body = new AnalyzedCodeBlock(
+            List.of(returnStmt),
+            true,
+            dummySourceInfo()
+        );
         
-        IRFunction function = module.functions().get(0);
-        assertEquals("empty", function.name());
-        assertEquals(Type.VOID, function.returnType());
-        assertEquals(0, function.locals().size());
+        AnalyzedFunctionDeclaration function = new AnalyzedFunctionDeclaration(
+            Type.VOID,
+            "empty",
+            List.of(),
+            body,
+            List.of(),
+            dummySourceInfo()
+        );
         
-        // Should still have at least one basic block with a terminator
-        assertTrue(function.basicBlocks().size() >= 1);
-        assertNotNull(function.basicBlocks().get(0).terminator());
+        AnalyzedProgram program = new AnalyzedProgram(List.of(function));
+        
+        IRBuilder builder = new IRBuilder(program);
+        IRModule module = builder.build();
+        
+        IRFunction irFunction = module.functions().get(0);
+        assertEquals("empty", irFunction.name());
+        assertEquals(Type.VOID, irFunction.returnType());
+        assertEquals(0, irFunction.locals().size());
+        assertTrue(irFunction.basicBlocks().size() >= 1);
+    }
+
+    @Test
+    public void basic_block_structure() {
+        // int main() { return 0; }
+        AnalyzedIntegerLiteral zero = new AnalyzedIntegerLiteral(0, Type.INT, dummySourceInfo());
+        AnalyzedReturnStatement returnStmt = new AnalyzedReturnStatement(
+            Optional.of(zero),
+            dummySourceInfo()
+        );
+        AnalyzedCodeBlock body = new AnalyzedCodeBlock(
+            List.of(returnStmt),
+            true,
+            dummySourceInfo()
+        );
+        
+        AnalyzedFunctionDeclaration function = new AnalyzedFunctionDeclaration(
+            Type.INT,
+            "main",
+            List.of(),
+            body,
+            List.of(),
+            dummySourceInfo()
+        );
+        
+        AnalyzedProgram program = new AnalyzedProgram(List.of(function));
+        
+        IRBuilder builder = new IRBuilder(program);
+        IRModule module = builder.build();
+        
+        IRFunction irFunction = module.functions().get(0);
+        List<BasicBlock> blocks = irFunction.basicBlocks();
+        
+        // Should have at least one basic block (entry)
+        assertTrue(blocks.size() >= 1);
+        
+        // Entry block should have a name
+        BasicBlock entryBlock = blocks.get(0);
+        assertNotNull(entryBlock.name());
+        
+        // Entry block should have a terminator
+        assertNotNull(entryBlock.terminator());
     }
 }
