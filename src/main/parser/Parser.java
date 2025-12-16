@@ -55,16 +55,14 @@ public class Parser {
         String name = currentToken().lexeme();
         increment();
 
-        expectCurrentTokenKind(TokenKind.LEFT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.LEFT_PAREN);
 
         List<Parameter> parameters = List.of();
         if (currentToken().kind() != TokenKind.RIGHT_PAREN) {
             parameters = parseParameterList();
         }
 
-        expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.RIGHT_PAREN);
 
         CodeBlock body = parseCodeBlock();
         Token lastToken = body.sourceInfo().lastToken();
@@ -111,8 +109,7 @@ public class Parser {
     private VariableDeclaration parseVariableDeclarationStatement() {
         VariableDeclaration variableDeclaration = parseVariableDeclaration();
 
-        expectCurrentTokenKind(TokenKind.SEMICOLON);
-        increment();
+        expectAndIncrement(TokenKind.SEMICOLON);
 
         return variableDeclaration;
     }
@@ -120,8 +117,7 @@ public class Parser {
     private Assignment parseAssignmentStatement() {
         Assignment assignment = parseAssignment();
 
-        expectCurrentTokenKind(TokenKind.SEMICOLON);
-        increment();
+        expectAndIncrement(TokenKind.SEMICOLON);
 
         return assignment;
     }
@@ -139,8 +135,7 @@ public class Parser {
             return new VariableDeclaration(type, name, Optional.empty(), sourceInfo);
         }
 
-        expectCurrentTokenKind(TokenKind.ASSIGN);
-        increment();
+        expectAndIncrement(TokenKind.ASSIGN);
 
         Expression initialValue = parseExpression();
 
@@ -155,8 +150,7 @@ public class Parser {
         Token firstToken = consume();
         String variableName = firstToken.lexeme();
 
-        expectCurrentTokenKind(TokenKind.ASSIGN);
-        increment();
+        expectAndIncrement(TokenKind.ASSIGN);
 
         Expression value = parseExpression();
 
@@ -187,32 +181,28 @@ public class Parser {
         expectCurrentTokenKind(TokenKind.FOR);
         Token firstToken = consume();
 
-        expectCurrentTokenKind(TokenKind.LEFT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.LEFT_PAREN);
 
         Optional<ForStatement.Initializer> initializer = Optional.empty();
         if (currentToken().kind() != TokenKind.SEMICOLON) {
             initializer = Optional.of(parseForInitializer());
         }
 
-        expectCurrentTokenKind(TokenKind.SEMICOLON);
-        increment();
+        expectAndIncrement(TokenKind.SEMICOLON);
 
         Optional<Expression> condition = Optional.empty();
         if (currentToken().kind() != TokenKind.SEMICOLON) {
             condition = Optional.of(parseExpression());
         }
 
-        expectCurrentTokenKind(TokenKind.SEMICOLON);
-        increment();
+        expectAndIncrement(TokenKind.SEMICOLON);
 
         Optional<Assignment> update = Optional.empty();
         if (currentToken().kind() != TokenKind.RIGHT_PAREN) {
             update = Optional.of(parseAssignment());
         }
 
-        expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.RIGHT_PAREN);
 
         Statement body = parseStatement();
 
@@ -235,16 +225,13 @@ public class Parser {
 
         Statement body = parseStatement();
 
-        expectCurrentTokenKind(TokenKind.WHILE);
-        increment();
+        expectAndIncrement(TokenKind.WHILE);
 
-        expectCurrentTokenKind(TokenKind.LEFT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.LEFT_PAREN);
 
         Expression condition = parseExpression();
 
-        expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.RIGHT_PAREN);
 
         expectCurrentTokenKind(TokenKind.SEMICOLON);
 
@@ -258,13 +245,11 @@ public class Parser {
         expectCurrentTokenKind(TokenKind.WHILE);
         Token firstToken = consume();
 
-        expectCurrentTokenKind(TokenKind.LEFT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.LEFT_PAREN);
 
         Expression condition = parseExpression();
 
-        expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.RIGHT_PAREN);
 
         Statement body = parseStatement();
 
@@ -278,13 +263,11 @@ public class Parser {
         expectCurrentTokenKind(TokenKind.IF);
         Token firstToken = consume();
 
-        expectCurrentTokenKind(TokenKind.LEFT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.LEFT_PAREN);
 
         Expression condition = parseExpression();
 
-        expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-        increment();
+        expectAndIncrement(TokenKind.RIGHT_PAREN);
 
         Statement body = parseStatement();
         Token lastToken = body.sourceInfo().lastToken();
@@ -556,8 +539,7 @@ public class Parser {
             case LEFT_PAREN         -> {
                 Expression result = parseExpression();
 
-                expectCurrentTokenKind(TokenKind.RIGHT_PAREN);
-                increment();
+                expectAndIncrement(TokenKind.RIGHT_PAREN);
 
                 yield result;
             }
@@ -624,6 +606,15 @@ public class Parser {
         if (currentToken.kind() != kind) {
             errors.add(new UnexpectedKindError(currentToken, kind));
             throw new FatalParsingException();
+        }
+    }
+
+    private void expectAndIncrement(TokenKind kind) {
+        Token currentToken = currentToken();
+        if (currentToken.kind() != kind) {
+            errors.add(new UnexpectedKindError(currentToken, kind));
+        } else {
+            increment();
         }
     }
 
