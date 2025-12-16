@@ -11,10 +11,11 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LexerTest {
+    private final String LEXER_SUBDIRECTORY = "lexer";
 
     @Test
     public void keywords_all_types() throws IOException {
-        String input = TestUtils.readTestFile("keywords_all_types.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "keywords_all_types.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -33,7 +34,7 @@ public class LexerTest {
 
     @Test
     public void keywords_control_flow() throws IOException {
-        String input = TestUtils.readTestFile("keywords_control_flow.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "keywords_control_flow.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -50,7 +51,7 @@ public class LexerTest {
 
     @Test
     public void keywords_boolean_literals() throws IOException {
-        String input = TestUtils.readTestFile("keywords_boolean_literals.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "keywords_boolean_literals.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -64,7 +65,7 @@ public class LexerTest {
 
     @Test
     public void identifiers() throws IOException {
-        String input = TestUtils.readTestFile("identifiers.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "identifiers.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -85,7 +86,7 @@ public class LexerTest {
 
     @Test
     public void integer_literals() throws IOException {
-        String input = TestUtils.readTestFile("integer_literals.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "integer_literals.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -110,7 +111,7 @@ public class LexerTest {
 
     @Test
     public void floating_point_literals() throws IOException {
-        String input = TestUtils.readTestFile("floating_point_literals.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "floating_point_literals.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -134,7 +135,7 @@ public class LexerTest {
 
     @Test
     public void arithmetic_operators() throws IOException {
-        String input = TestUtils.readTestFile("arithmetic_operators.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "arithmetic_operators.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -150,7 +151,7 @@ public class LexerTest {
 
     @Test
     public void logical_operators() throws IOException {
-        String input = TestUtils.readTestFile("logical_operators.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "logical_operators.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -166,7 +167,7 @@ public class LexerTest {
 
     @Test
     public void bitwise_operators() throws IOException {
-        String input = TestUtils.readTestFile("bitwise_operators.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "bitwise_operators.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -183,7 +184,7 @@ public class LexerTest {
 
     @Test
     public void comparison_operators() throws IOException {
-        String input = TestUtils.readTestFile("comparison_operators.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "comparison_operators.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -200,7 +201,7 @@ public class LexerTest {
 
     @Test
     public void assignment_operator() throws IOException {
-        String input = TestUtils.readTestFile("assignment_operator.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "assignment_operator.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -214,7 +215,7 @@ public class LexerTest {
 
     @Test
     public void punctuation() throws IOException {
-        String input = TestUtils.readTestFile("punctuation.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "punctuation.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -231,7 +232,7 @@ public class LexerTest {
 
     @Test
     public void mixed_expression() throws IOException {
-        String input = TestUtils.readTestFile("mixed_expression.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "mixed_expression.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -252,7 +253,7 @@ public class LexerTest {
 
     @Test
     public void function_declaration() throws IOException {
-        String input = TestUtils.readTestFile("function_declaration.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "function_declaration.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -269,7 +270,6 @@ public class LexerTest {
         List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
         assertEquals(expectedKinds, actualKinds);
 
-        // Verify specific identifier lexemes (function name and parameters)
         List<String> expectedIdentifierLexemes = List.of("add", "a", "b", "a", "b");
         List<String> actualIdentifierLexemes = tokens.stream()
             .filter(t -> t.kind() == TokenKind.IDENTIFIER)
@@ -280,7 +280,7 @@ public class LexerTest {
 
     @Test
     public void complex_expression() throws IOException {
-        String input = TestUtils.readTestFile("complex_expression.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "complex_expression.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -300,7 +300,7 @@ public class LexerTest {
 
     @Test
     public void whitespace_handling() throws IOException {
-        String input = TestUtils.readTestFile("whitespace_handling.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "whitespace_handling.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -317,7 +317,7 @@ public class LexerTest {
 
     @Test
     public void multiline_code() throws IOException {
-        String input = TestUtils.readTestFile("multiline_code.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "multiline_code.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -333,7 +333,6 @@ public class LexerTest {
         List<TokenKind> actualKinds = tokens.stream().map(Token::kind).toList();
         assertEquals(expectedKinds, actualKinds);
 
-        // Verify line numbers for INT tokens (one per line)
         List<Integer> expectedIntLines = List.of(1, 2, 3);
         List<Integer> actualIntLines = tokens.stream()
             .filter(t -> t.kind() == TokenKind.INT)
@@ -344,7 +343,7 @@ public class LexerTest {
 
     @Test
     public void empty_input() throws IOException {
-        String input = TestUtils.readTestFile("empty_input.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "empty_input.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
@@ -358,7 +357,7 @@ public class LexerTest {
 
     @Test
     public void unexpected_character() throws IOException {
-        String input = TestUtils.readTestFile("unexpected_character.lux");
+        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "unexpected_character.lux");
         Lexer lexer = new Lexer(input);
         LexingResult result = lexer.lex();
 
