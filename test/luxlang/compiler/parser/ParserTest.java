@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static luxlang.compiler.parser.ParserTestUtils.tokens;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class ParserTest {
@@ -16,18 +17,21 @@ public class ParserTest {
     @Test
     public void simple_function() {
         // int main() { return 0; }
-        List<Token> tokens = List.of(
-            new Token(TokenKind.INT, "int", 1, 1),
-            new Token(TokenKind.IDENTIFIER, "main", 1, 5),
-            new Token(TokenKind.LEFT_PAREN, "(", 1, 9),
-            new Token(TokenKind.RIGHT_PAREN, ")", 1, 10),
-            new Token(TokenKind.LEFT_BRACE, "{", 1, 12),
-            new Token(TokenKind.RETURN, "return", 2, 5),
-            new Token(TokenKind.LITERAL_INTEGER, "0", 2, 12),
-            new Token(TokenKind.SEMICOLON, ";", 2, 13),
-            new Token(TokenKind.RIGHT_BRACE, "}", 3, 1),
-            new Token(TokenKind.EOF, "", 4, 1)
-        );
+        List<Token> tokens = tokens()
+            .keyword(TokenKind.INT)
+            .identifier("main")
+            .punctuation(TokenKind.LEFT_PAREN)
+            .punctuation(TokenKind.RIGHT_PAREN)
+            .punctuation(TokenKind.LEFT_BRACE)
+            .newLine()
+            .keyword(TokenKind.RETURN)
+            .intLiteral("0")
+            .punctuation(TokenKind.SEMICOLON)
+            .newLine()
+            .punctuation(TokenKind.RIGHT_BRACE)
+            .newLine()
+            .eof()
+            .build();
         
         Parser parser = new Parser(tokens);
         ParsingResult result = parser.parse();

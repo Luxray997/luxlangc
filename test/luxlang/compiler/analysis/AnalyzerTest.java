@@ -3,44 +3,26 @@ package luxlang.compiler.analysis;
 import luxlang.compiler.analysis.nodes.AnalyzedFunctionDeclaration;
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
 import luxlang.compiler.analysis.nodes.LocalVariable;
-import luxlang.compiler.lexer.objects.Token;
-import luxlang.compiler.lexer.objects.TokenKind;
 import luxlang.compiler.parser.nodes.*;
-import luxlang.compiler.parser.nodes.expressions.IntegerLiteral;
-import luxlang.compiler.parser.nodes.statements.CodeBlock;
-import luxlang.compiler.parser.nodes.statements.ReturnStatement;
-import luxlang.compiler.parser.nodes.statements.VariableDeclaration;
-import luxlang.compiler.parser.objects.SourceInfo;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.Optional;
 
+import static luxlang.compiler.analysis.AnalyzerTestUtils.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class AnalyzerTest {
 
-    private SourceInfo dummySourceInfo() {
-        Token dummyToken = new Token(TokenKind.EOF, "", 1, 1);
-        return new SourceInfo(dummyToken, dummyToken);
-    }
-
     @Test
     public void simple_function() {
         // int main() { return 0; }
-        IntegerLiteral zero = new IntegerLiteral("0", dummySourceInfo());
-        ReturnStatement returnStmt = new ReturnStatement(Optional.of(zero), dummySourceInfo());
-        CodeBlock body = new CodeBlock(List.of(returnStmt), dummySourceInfo());
-        
-        FunctionDeclaration function = new FunctionDeclaration(
-            Type.INT,
-            "main",
-            List.of(),
-            body,
-            dummySourceInfo()
+        Program program = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .returnValue(intLiteral(0))
+                .build()
         );
-        
-        Program program = new Program(List.of(function));
         
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
@@ -58,22 +40,15 @@ public class AnalyzerTest {
     @Test
     public void function_with_parameters() {
         // int add(int a, int b) { return 0; }
-        IntegerLiteral zero = new IntegerLiteral("0", dummySourceInfo());
-        ReturnStatement returnStmt = new ReturnStatement(Optional.of(zero), dummySourceInfo());
-        CodeBlock body = new CodeBlock(List.of(returnStmt), dummySourceInfo());
-        
-        Parameter param1 = new Parameter(Type.INT, "a", dummySourceInfo());
-        Parameter param2 = new Parameter(Type.INT, "b", dummySourceInfo());
-        
-        FunctionDeclaration function = new FunctionDeclaration(
-            Type.INT,
-            "add",
-            List.of(param1, param2),
-            body,
-            dummySourceInfo()
+        Program program = program(
+            function()
+                .returnType(Type.INT)
+                .name("add")
+                .param(Type.INT, "a")
+                .param(Type.INT, "b")
+                .returnValue(intLiteral(0))
+                .build()
         );
-        
-        Program program = new Program(List.of(function));
         
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
@@ -95,29 +70,15 @@ public class AnalyzerTest {
     @Test
     public void local_variable_tracking() {
         // int main() { int x = 10; int y = 20; return 0; }
-        IntegerLiteral ten = new IntegerLiteral("10", dummySourceInfo());
-        IntegerLiteral twenty = new IntegerLiteral("20", dummySourceInfo());
-        IntegerLiteral zero = new IntegerLiteral("0", dummySourceInfo());
-        
-        VariableDeclaration varX = new VariableDeclaration(
-            Type.INT, "x", Optional.of(ten), dummySourceInfo()
+        Program program = program(
+            function()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(varDecl(Type.INT, "x", intLiteral(10)))
+                .statement(varDecl(Type.INT, "y", intLiteral(20)))
+                .returnValue(intLiteral(0))
+                .build()
         );
-        VariableDeclaration varY = new VariableDeclaration(
-            Type.INT, "y", Optional.of(twenty), dummySourceInfo()
-        );
-        ReturnStatement returnStmt = new ReturnStatement(Optional.of(zero), dummySourceInfo());
-        
-        CodeBlock body = new CodeBlock(List.of(varX, varY, returnStmt), dummySourceInfo());
-        
-        FunctionDeclaration function = new FunctionDeclaration(
-            Type.INT,
-            "main",
-            List.of(),
-            body,
-            dummySourceInfo()
-        );
-        
-        Program program = new Program(List.of(function));
         
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
@@ -142,23 +103,18 @@ public class AnalyzerTest {
     @Test
     public void multiple_functions() {
         // int foo() { return 1; } int bar() { return 2; }
-        IntegerLiteral one = new IntegerLiteral("1", dummySourceInfo());
-        IntegerLiteral two = new IntegerLiteral("2", dummySourceInfo());
-        
-        ReturnStatement returnOne = new ReturnStatement(Optional.of(one), dummySourceInfo());
-        ReturnStatement returnTwo = new ReturnStatement(Optional.of(two), dummySourceInfo());
-        
-        CodeBlock body1 = new CodeBlock(List.of(returnOne), dummySourceInfo());
-        CodeBlock body2 = new CodeBlock(List.of(returnTwo), dummySourceInfo());
-        
-        FunctionDeclaration func1 = new FunctionDeclaration(
-            Type.INT, "foo", List.of(), body1, dummySourceInfo()
+        Program program = program(
+            function()
+                .returnType(Type.INT)
+                .name("foo")
+                .returnValue(intLiteral(1))
+                .build(),
+            function()
+                .returnType(Type.INT)
+                .name("bar")
+                .returnValue(intLiteral(2))
+                .build()
         );
-        FunctionDeclaration func2 = new FunctionDeclaration(
-            Type.INT, "bar", List.of(), body2, dummySourceInfo()
-        );
-        
-        Program program = new Program(List.of(func1, func2));
         
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();
@@ -174,18 +130,13 @@ public class AnalyzerTest {
     @Test
     public void void_function() {
         // void empty() { return; }
-        ReturnStatement returnStmt = new ReturnStatement(Optional.empty(), dummySourceInfo());
-        CodeBlock body = new CodeBlock(List.of(returnStmt), dummySourceInfo());
-        
-        FunctionDeclaration function = new FunctionDeclaration(
-            Type.VOID,
-            "empty",
-            List.of(),
-            body,
-            dummySourceInfo()
+        Program program = program(
+            function()
+                .returnType(Type.VOID)
+                .name("empty")
+                .returnVoid()
+                .build()
         );
-        
-        Program program = new Program(List.of(function));
         
         Analyzer analyzer = new Analyzer(program);
         AnalysisResult result = analyzer.analyze();

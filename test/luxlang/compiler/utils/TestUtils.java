@@ -1,5 +1,9 @@
 package luxlang.compiler.utils;
 
+import luxlang.compiler.lexer.objects.Token;
+import luxlang.compiler.lexer.objects.TokenKind;
+import luxlang.compiler.parser.objects.SourceInfo;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
@@ -15,5 +19,14 @@ public class TestUtils {
             throw new NoSuchFileException("Test file not found: " + subdirectory + "/" + fileName);
         }
         return Files.readString(file);
+    }
+
+    /**
+     * Creates a dummy SourceInfo for testing purposes.
+     * This is useful when you need a SourceInfo but the actual source location doesn't matter.
+     */
+    public static SourceInfo dummySourceInfo() {
+        Token dummyToken = new Token(TokenKind.EOF, "", 1, 1);
+        return new SourceInfo(dummyToken, dummyToken);
     }
 }
