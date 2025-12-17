@@ -21,12 +21,9 @@ public class TestUtils {
         return Files.readString(file);
     }
 
-    /**
-     * Creates a dummy SourceInfo for testing purposes.
-     * This is useful when you need a SourceInfo but the actual source location doesn't matter.
-     */
     public static SourceInfo dummySourceInfo() {
-        Token dummyToken = new Token(TokenKind.EOF, "", 1, 1);
+        Token dummyToken = new Token(TokenKind.EOF, null, 1, 1);
         return new SourceInfo(dummyToken, dummyToken);
     }
+
 }
