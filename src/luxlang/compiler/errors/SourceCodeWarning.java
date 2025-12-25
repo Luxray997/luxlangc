@@ -1,8 +1,8 @@
 package luxlang.compiler.errors;
 
-public interface SourceCodeError {
+public interface SourceCodeWarning {
     String MESSAGE_TEMPLATE = """
-        Error: %s
+        Warning: %s
         At line: %d, column: %d
         """;
 

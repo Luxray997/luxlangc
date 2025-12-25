@@ -5,6 +5,7 @@ import luxlang.compiler.analysis.nodes.expressions.*;
 import luxlang.compiler.analysis.nodes.statements.*;
 import luxlang.compiler.parser.nodes.expressions.*;
 import luxlang.compiler.parser.nodes.statements.*;
+import luxlang.compiler.analysis.warnings.AnalysisWarning;
 import luxlang.compiler.analysis.nodes.AnalyzedFunctionDeclaration;
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
 import luxlang.compiler.analysis.nodes.LocalVariable;
@@ -26,6 +27,7 @@ import java.util.Optional;
 public class Analyzer {
     private final Program program;
     private final List<AnalysisError> errors;
+    private final List<AnalysisWarning> warnings;
 
     private int nextLocalVariableId;
     private List<LocalVariable> localVariables;
@@ -33,6 +35,7 @@ public class Analyzer {
     public Analyzer(Program program) {
         this.program = program;
         this.errors = new ArrayList<>();
+        this.warnings = new ArrayList<>();
     }
 
     /**
@@ -144,7 +147,7 @@ public class Analyzer {
     private AnalyzedVariableExpression analyzeVariableExpression(VariableExpression variableExpression, Scope scope) {
         if (!scope.hasVariable(variableExpression.name())) {
             errors.add(new UndefinedVariableError(variableExpression));
-            return new AnalyzedVariableExpression(variableExpression.name(), Type.VOID, variableExpression.sourceInfo());
+            return new AnalyzedVariableExpression(variableExpression.name(), Type.ERROR, variableExpression.sourceInfo());
         }
 
         VariableSymbol target = scope.getVariable(variableExpression.name());
@@ -154,10 +157,20 @@ public class Analyzer {
     private AnalyzedUnaryOperation analyzeUnaryOperation(UnaryOperation unaryOperation, Scope scope) {
         var operation = unaryOperation.operation();
         var analyzedOperand = analyzeExpression(unaryOperation.operand(), scope);
-        if (!UnaryOperation.isValid(analyzedOperand.resultType(), operation)) {
-            errors.add(new InvalidOperationError(unaryOperation, analyzedOperand.resultType()));
+        Type resultType;
+        Type operandType = analyzedOperand.resultType();
+
+        if (operandType == Type.ERROR) {
+            return new AnalyzedUnaryOperation(operation, analyzedOperand, Type.ERROR, unaryOperation.sourceInfo());
         }
-        return new AnalyzedUnaryOperation(operation, analyzedOperand, analyzedOperand.resultType(), unaryOperation.sourceInfo());
+
+        if (!UnaryOperation.isValid(operandType, operation)) {
+            errors.add(new InvalidOperationError(unaryOperation, operandType));
+            return new AnalyzedUnaryOperation(operation, analyzedOperand, Type.ERROR, unaryOperation.sourceInfo());
+        }
+        
+        resultType = operandType;
+        return new AnalyzedUnaryOperation(operation, analyzedOperand, resultType, unaryOperation.sourceInfo());
     }
 
 
@@ -240,7 +253,7 @@ public class Analyzer {
     private AnalyzedFunctionCall analyzeFunctionCall(FunctionCall functionCall, Scope scope) {
         if (!scope.hasFunction(functionCall.name())) {
             errors.add(new UndefinedFunctionError(functionCall));
-            return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.VOID, functionCall.sourceInfo());
+            return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.ERROR, functionCall.sourceInfo());
         }
 
         FunctionSymbol target = scope.getFunction(functionCall.name());
@@ -254,7 +267,7 @@ public class Analyzer {
             argumentTypes.add(analyzedArgument.resultType());
         }
 
-        if (!argumentTypes.equals(parameterTypes)) {
+        if (!argumentTypes.contains(Type.ERROR) && !argumentTypes.equals(parameterTypes)) {
             errors.add(new ArgumentTypeMismatchError(functionCall, argumentTypes, target));
         }
 
@@ -295,13 +308,11 @@ public class Analyzer {
         var analyzedLeft = analyzeExpression(binaryOperation.left(), scope);
         var analyzedRight = analyzeExpression(binaryOperation.right(), scope);
         BinaryOperation.BinaryOperationType operation = binaryOperation.operation();
-        Optional<Type> type = BinaryOperation.getResultType(analyzedLeft.resultType(), analyzedRight.resultType(), operation);
-        // TODO: extract warnings/errors from above method
-        if (type.isEmpty()) {
-            errors.add(new InvalidOperationError(binaryOperation, analyzedLeft.resultType(), analyzedRight.resultType()));
-        }
-        // TODO: custom error type (?) so that type errors aren't propagated
-        var resultType = type.orElse(Type.VOID);
+        var typeResult = AnalyzedBinaryOperation.getResultType(analyzedLeft.resultType(), analyzedRight.resultType(), operation, binaryOperation.sourceInfo());
+        errors.addAll(typeResult.errors());
+        warnings.addAll(typeResult.warnings());
+
+        Type resultType = typeResult.type();
         return new AnalyzedBinaryOperation(operation, analyzedLeft, analyzedRight, resultType, binaryOperation.sourceInfo());
     }
 
@@ -316,7 +327,7 @@ public class Analyzer {
 
         var analyzedValue = analyzeExpression(assignment.value(), scope);
 
-        if (target.type() != analyzedValue.resultType()) {
+        if (analyzedValue.resultType() != Type.ERROR && target.type() != analyzedValue.resultType()) {
             errors.add(new TypeMismatchError(assignment, target.type(), analyzedValue.resultType()));
         }
 
@@ -340,7 +351,8 @@ public class Analyzer {
         AnalyzedExpression analyzedInitialValue = null;
         if (variableDeclaration.initialValue().isPresent()) {
             analyzedInitialValue = analyzeExpression(variableDeclaration.initialValue().get(), scope);
-            if (variableDeclaration.type() != analyzedInitialValue.resultType()) {
+
+            if (analyzedInitialValue.resultType() != Type.ERROR && variableDeclaration.type() != analyzedInitialValue.resultType()) {
                 errors.add(new TypeMismatchError(variableDeclaration, analyzedInitialValue.resultType()));
             }
         }
@@ -356,7 +368,8 @@ public class Analyzer {
                 return new AnalyzedReturnStatement(Optional.empty(), returnStatement.sourceInfo());
             }
             analyzedReturnValue = analyzeExpression(returnStatement.value().get(), scope);
-            if (analyzedReturnValue.resultType() != functionReturnType) {
+
+            if (analyzedReturnValue.resultType() != Type.ERROR && analyzedReturnValue.resultType() != functionReturnType) {
                 errors.add(new ReturnTypeError(returnStatement, functionReturnType, analyzedReturnValue.resultType()));
             }
         } else if (functionReturnType != Type.VOID) {
@@ -381,7 +394,8 @@ public class Analyzer {
         AnalyzedExpression analyzedCondition = null;
         if (forStatement.condition().isPresent()) {
             analyzedCondition = analyzeExpression(forStatement.condition().get(), headerScope);
-            if (analyzedCondition.resultType() != Type.BOOL) {
+
+            if (analyzedCondition.resultType() != Type.ERROR && analyzedCondition.resultType() != Type.BOOL) {
                 errors.add(new InvalidConditionError(forStatement));
             }
             alwaysTrue = forStatement.condition().get() instanceof BooleanLiteral b && b.value() == BooleanLiteral.Value.TRUE;
@@ -410,7 +424,8 @@ public class Analyzer {
         var analyzedBody = analyzeStatement(doWhileStatement.body(), scope, functionReturnType);
 
         var analyzedCondition = analyzeExpression(doWhileStatement.condition(), scope);
-        if (analyzedCondition.resultType() != Type.BOOL) {
+
+        if (analyzedCondition.resultType() != Type.ERROR && analyzedCondition.resultType() != Type.BOOL) {
             errors.add(new InvalidConditionError(doWhileStatement));
         }
 
@@ -420,7 +435,8 @@ public class Analyzer {
 
     private AnalyzedWhileStatement analyzeWhileStatement(WhileStatement whileStatement, Scope scope, Type functionReturnType) {
         var analyzedCondition = analyzeExpression(whileStatement.condition(), scope);
-        if (analyzedCondition.resultType() != Type.BOOL) {
+
+        if (analyzedCondition.resultType() != Type.ERROR && analyzedCondition.resultType() != Type.BOOL) {
             errors.add(new InvalidConditionError(whileStatement));
         }
 
@@ -434,7 +450,8 @@ public class Analyzer {
 
     private AnalyzedIfStatement analyzeIfStatement(IfStatement ifStatement, Scope scope, Type functionReturnType) {
         var analyzedCondition = analyzeExpression(ifStatement.condition(), scope);
-        if (analyzedCondition.resultType() != Type.BOOL) {
+
+        if (analyzedCondition.resultType() != Type.ERROR && analyzedCondition.resultType() != Type.BOOL) {
             errors.add(new InvalidConditionError(ifStatement));
         }
 

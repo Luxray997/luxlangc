@@ -1,6 +1,7 @@
 package luxlang.compiler.parser.nodes;
 
 public enum Type {
+    ERROR(0),
     VOID(0),
     BOOL(1),
     BYTE(1),
