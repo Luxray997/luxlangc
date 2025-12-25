@@ -35,6 +35,38 @@ public final class BasicBlock {
         return terminator;
     }
 
+    /**
+     * Format:
+     *   bb<id>:  ; <name>
+     *       <instructions>
+     *       <terminator>
+     */
+    public String serialize() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("  bb").append(id).append(":  ; ").append(name).append("\n");
+
+        for (RegularInstruction instruction : instructions) {
+            sb.append("    ").append(instruction.serialize()).append("\n");
+        }
+
+        if (terminator != null) {
+            sb.append("    ").append(terminator.serialize()).append("\n");
+        }
+
+        return sb.toString();
+    }
+
+    public String label() {
+        return "bb" + id;
+    }
+
+    public void setTerminator(TerminatorInstruction terminatorInstruction) {
+        if (this.terminator == null) {
+            this.terminator = terminatorInstruction;
+        }
+        // This needs to be null checked so that ifs/loops/functions don't overwrite blocks ending with an explicit return
+    }
+
     @Override
     public boolean equals(Object obj) {
         if (obj == this) return true;
@@ -58,12 +90,5 @@ public final class BasicBlock {
                 "name=" + name + ", " +
                 "instructions=" + instructions + ", " +
                 "terminator=" + terminator + ']';
-    }
-
-    public void setTerminator(TerminatorInstruction terminatorInstruction) {
-        if (this.terminator == null) {
-            this.terminator = terminatorInstruction;
-        }
-        // This needs to be null checked so that ifs/loops/functions don't overwrite blocks ending with an explicit return
     }
 }

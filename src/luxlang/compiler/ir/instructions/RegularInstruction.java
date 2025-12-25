@@ -1,3 +1,5 @@
 package luxlang.compiler.ir.instructions;
 
-public interface RegularInstruction { }
+public interface RegularInstruction {
+    String serialize();
+}
