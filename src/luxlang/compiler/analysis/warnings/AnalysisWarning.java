@@ -1,9 +1,9 @@
-package luxlang.compiler.analysis.errors;
+package luxlang.compiler.analysis.warnings;
 
-import luxlang.compiler.errors.SourceCodeError;
+import luxlang.compiler.errors.SourceCodeWarning;
 import luxlang.compiler.lexer.objects.Token;
 
-public interface AnalysisError extends SourceCodeError {
+public interface AnalysisWarning extends SourceCodeWarning {
     String reason();
     Token startToken();
     Token endToken();

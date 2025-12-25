@@ -3,7 +3,9 @@ package luxlang.compiler.analysis.errors;
 import luxlang.compiler.lexer.objects.Token;
 import luxlang.compiler.parser.nodes.Type;
 import luxlang.compiler.parser.nodes.expressions.BinaryOperation;
+import luxlang.compiler.parser.nodes.expressions.BinaryOperation.BinaryOperationType;
 import luxlang.compiler.parser.nodes.expressions.UnaryOperation;
+import luxlang.compiler.parser.objects.SourceInfo;
 
 public record InvalidOperationError(
     String reason,
@@ -26,6 +28,14 @@ public record InvalidOperationError(
             REASON_TEMPLATE_BINARY.formatted(binaryOperation.operation().lexeme(), leftType.lexeme(), rightType.lexeme()),
             binaryOperation.sourceInfo().firstToken(),
             binaryOperation.sourceInfo().lastToken()
+        );
+    }
+
+    public InvalidOperationError(BinaryOperationType operationType, Type leftType, Type rightType, SourceInfo sourceInfo) {
+        this(
+            REASON_TEMPLATE_BINARY.formatted(operationType.lexeme(), leftType.lexeme(), rightType.lexeme()),
+            sourceInfo.firstToken(),
+            sourceInfo.lastToken()
         );
     }
 }
