@@ -1,9 +1,0 @@
-int main() {
-    bool a = 5 < 10;
-    bool b = 10 <= 10;
-    bool c = 15 > 10;
-    bool d = 10 >= 10;
-    bool e = 5 == 5;
-    bool f = 5 != 10;
-    return 0;
-}

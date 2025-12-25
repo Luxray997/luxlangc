@@ -1,8 +1,0 @@
-int main() {
-    int a = 10 + 20;
-    int b = 30 - 15;
-    int c = 5 * 4;
-    int d = 20 / 2;
-    int e = 17 % 5;
-    return a + b + c + d + e;
-}
