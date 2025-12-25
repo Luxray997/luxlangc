@@ -20,6 +20,10 @@ public class AnalyzedAstBuilder {
     public static AnalyzedIntegerLiteral analyzedIntLiteral(long value, Type type) {
         return new AnalyzedIntegerLiteral(value, type, TestUtils.dummySourceInfo());
     }
+
+    public static AnalyzedFloatingPointLiteral analyzedFPLiteral(double value, Type type) {
+        return new AnalyzedFloatingPointLiteral(value, type, TestUtils.dummySourceInfo());
+    }
     
     public static AnalyzedBinaryOperation analyzedBinaryOp(
         BinaryOperationType operation,
@@ -61,6 +65,35 @@ public class AnalyzedAstBuilder {
     public static AnalyzedVariableDeclaration analyzedVarDecl(Type type, String name) {
         return new AnalyzedVariableDeclaration(type, name, Optional.empty(), TestUtils.dummySourceInfo());
     }
+
+    public static AnalyzedForStatement analyzedForStmt(
+        AnalyzedForStatement.Initializer initializer,
+        AnalyzedExpression condition,
+        AnalyzedAssignment update,
+        AnalyzedStatement body,
+        boolean hasGuaranteedReturn
+    ) {
+        return new AnalyzedForStatement(
+            Optional.of(initializer),
+            Optional.of(condition),
+            Optional.of(update),
+            body,
+            hasGuaranteedReturn,
+            TestUtils.dummySourceInfo()
+        );
+    }
+
+    public static AnalyzedFunctionCall analyzedFuncCall(
+        String name,
+        Type resultType,
+        AnalyzedExpression... arguments
+    ) {
+        return new AnalyzedFunctionCall(name, List.of(arguments), resultType, TestUtils.dummySourceInfo());
+    }
+
+    public static AnalyzedAssignment analyzedAssignment(String left, AnalyzedExpression right) {
+        return new AnalyzedAssignment(left, right, TestUtils.dummySourceInfo());
+    }
     
     public static AnalyzedCodeBlock analyzedCodeBlock(boolean hasGuaranteedReturn, AnalyzedStatement... statements) {
         return new AnalyzedCodeBlock(List.of(statements), hasGuaranteedReturn, TestUtils.dummySourceInfo());
@@ -89,10 +122,6 @@ public class AnalyzedAstBuilder {
 
     public static Parameter param(Type type, String name) {
         return new Parameter(type, name, TestUtils.dummySourceInfo());
-    }
-
-    public static LocalVariable localVar(int index, String name, Type type) {
-        return new LocalVariable(index, name, type);
     }
 
     public static class FunctionBuilder {
@@ -128,8 +157,8 @@ public class AnalyzedAstBuilder {
             return this;
         }
 
-        public FunctionBuilder localVar(LocalVariable variable) {
-            this.localVariables.add(variable);
+        public FunctionBuilder localVar(int index, String name, Type type) {
+            this.localVariables.add(new LocalVariable(index, name, type));
             return this;
         }
         

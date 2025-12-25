@@ -1,18 +1,10 @@
 package luxlang.compiler.utils;
 
+import luxlang.compiler.analysis.nodes.expressions.AnalyzedExpression;
+import luxlang.compiler.analysis.nodes.expressions.AnalyzedFunctionCall;
 import luxlang.compiler.parser.nodes.*;
-import luxlang.compiler.parser.nodes.expressions.BinaryOperation;
-import luxlang.compiler.parser.nodes.expressions.BooleanLiteral;
-import luxlang.compiler.parser.nodes.expressions.Expression;
-import luxlang.compiler.parser.nodes.expressions.IntegerLiteral;
-import luxlang.compiler.parser.nodes.expressions.UnaryOperation;
-import luxlang.compiler.parser.nodes.expressions.VariableExpression;
-import luxlang.compiler.parser.nodes.statements.CodeBlock;
-import luxlang.compiler.parser.nodes.statements.IfStatement;
-import luxlang.compiler.parser.nodes.statements.ReturnStatement;
-import luxlang.compiler.parser.nodes.statements.Statement;
-import luxlang.compiler.parser.nodes.statements.VariableDeclaration;
-import luxlang.compiler.parser.nodes.statements.WhileStatement;
+import luxlang.compiler.parser.nodes.expressions.*;
+import luxlang.compiler.parser.nodes.statements.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +53,14 @@ public class AstBuilder {
     
     public static VariableDeclaration varDecl(Type type, String name) {
         return new VariableDeclaration(type, name, Optional.empty(), TestUtils.dummySourceInfo());
+    }
+
+    public static FunctionCall funcCall(String name, Expression... arguments) {
+        return new FunctionCall(name, List.of(arguments), TestUtils.dummySourceInfo());
+    }
+
+    public static Assignment assignment(String left, Expression right) {
+        return new Assignment(left, right, TestUtils.dummySourceInfo());
     }
     
     public static CodeBlock codeBlock(Statement... statements) {

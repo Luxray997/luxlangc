@@ -71,8 +71,8 @@ public class AnalyzerTest {
                         Type.INT
                 )))
                 .hasGuaranteedReturn(true)
-                .localVar(localVar(0, "a", Type.INT))
-                .localVar(localVar(1, "b", Type.INT))
+                .localVar(0, "a", Type.INT)
+                .localVar(1, "b", Type.INT)
                 .build()
         );
         
@@ -108,8 +108,8 @@ public class AnalyzerTest {
                 .statement(analyzedVarDecl(Type.INT, "y", analyzedIntLiteral(20, Type.INT)))
                 .statement(analyzedReturnStmt(analyzedIntLiteral(0, Type.INT)))
                 .hasGuaranteedReturn(true)
-                .localVar(localVar(0, "x", Type.INT))
-                .localVar(localVar(1, "y", Type.INT))
+                .localVar(0, "x", Type.INT)
+                .localVar(1, "y", Type.INT)
                 .build()
         );
         

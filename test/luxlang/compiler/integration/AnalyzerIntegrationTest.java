@@ -1,185 +1,416 @@
 package luxlang.compiler.integration;
 
-import luxlang.compiler.analysis.AnalysisResult;
-import luxlang.compiler.analysis.Analyzer;
-import luxlang.compiler.analysis.nodes.AnalyzedFunctionDeclaration;
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
-import luxlang.compiler.analysis.nodes.LocalVariable;
-import luxlang.compiler.analysis.nodes.statements.AnalyzedCodeBlock;
-import luxlang.compiler.lexer.Lexer;
-import luxlang.compiler.lexer.LexingResult;
-import luxlang.compiler.lexer.objects.Token;
-import luxlang.compiler.parser.Parser;
-import luxlang.compiler.parser.ParsingResult;
-import luxlang.compiler.parser.nodes.Program;
 import luxlang.compiler.parser.nodes.Type;
+import luxlang.compiler.parser.nodes.expressions.BinaryOperation.BinaryOperationType;
 import luxlang.compiler.utils.TestUtils;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static luxlang.compiler.utils.AnalyzedAstBuilder.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class AnalyzerIntegrationTest {
-    private final String ANALYSIS_SUBDIRECTORY = "analysis";
-
-    private AnalyzedProgram analyzeFile(String fileName) throws IOException {
-        String input = TestUtils.readTestFile(ANALYSIS_SUBDIRECTORY, fileName);
-        
-        Lexer lexer = new Lexer(input);
-        LexingResult lexingResult = lexer.lex();
-        assertInstanceOf(LexingResult.Success.class, lexingResult);
-        List<Token> tokens = ((LexingResult.Success) lexingResult).tokens();
-        
-        Parser parser = new Parser(tokens);
-        ParsingResult parsingResult = parser.parse();
-        assertInstanceOf(ParsingResult.Success.class, parsingResult);
-        Program program = ((ParsingResult.Success) parsingResult).program();
-        
-        Analyzer analyzer = new Analyzer(program);
-        AnalysisResult result = analyzer.analyze();
-        assertInstanceOf(AnalysisResult.Success.class, result);
-        return ((AnalysisResult.Success) result).analyzedProgram();
-    }
 
     @Test
     public void simple_function() throws IOException {
-        AnalyzedProgram program = analyzeFile("simple_function.lux");
-        
-        assertEquals(1, program.functionDeclarations().size());
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        assertEquals("main", function.name());
-        assertEquals(Type.INT, function.returnType());
-        assertEquals(0, function.parameters().size());
-        assertInstanceOf(AnalyzedCodeBlock.class, function.body());
+        AnalyzedProgram actual = TestUtils.analyzeFile("simple_function.lux");
+
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedReturnStmt(analyzedIntLiteral(0, Type.INT)))
+                .hasGuaranteedReturn(true)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void function_call() throws IOException {
-        AnalyzedProgram program = analyzeFile("function_call.lux");
-        
-        assertEquals(2, program.functionDeclarations().size());
-        
-        AnalyzedFunctionDeclaration addFunc = program.functionDeclarations().get(0);
-        assertEquals("add", addFunc.name());
-        assertEquals(Type.INT, addFunc.returnType());
-        assertEquals(2, addFunc.parameters().size());
-        
-        AnalyzedFunctionDeclaration mainFunc = program.functionDeclarations().get(1);
-        assertEquals("main", mainFunc.name());
-        assertEquals(Type.INT, mainFunc.returnType());
-        assertTrue(mainFunc.localVariables().size() > 0);
+        AnalyzedProgram actual = TestUtils.analyzeFile("function_call.lux");
+
+        AnalyzedProgram expected =  analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("add")
+                .param(Type.INT, "a")
+                .param(Type.INT, "b")
+                .statement(analyzedReturnStmt(analyzedBinaryOp(
+                    BinaryOperationType.ADD,
+                    analyzedVarExpr("a", Type.INT),
+                    analyzedVarExpr("b", Type.INT),
+                    Type.INT
+                )))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "a", Type.INT)
+                .localVar(1, "b", Type.INT)
+                .build(),
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(
+                    Type.INT,
+                    "result",
+                    analyzedFuncCall(
+                        "add",
+                        Type.INT,
+                        analyzedIntLiteral(5, Type.INT),
+                        analyzedIntLiteral(10, Type.INT)
+                    )
+                ))
+                .statement(analyzedReturnStmt(analyzedVarExpr("result", Type.INT)))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "result", Type.INT)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void variable_scope() throws IOException {
-        AnalyzedProgram program = analyzeFile("variable_scope.lux");
-        
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        List<LocalVariable> localVariables = function.localVariables();
-        
-        // Should have at least 2 local variables (x and y)
-        assertTrue(localVariables.size() >= 2);
-        
-        // Check that variables have unique IDs
-        long uniqueIds = localVariables.stream().map(LocalVariable::id).distinct().count();
-        assertEquals(localVariables.size(), uniqueIds);
+        AnalyzedProgram actual = TestUtils.analyzeFile("variable_scope.lux");
+
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(Type.INT, "x", analyzedIntLiteral(10, Type.INT)))
+                .statement(analyzedCodeBlock(
+                    false,
+                    analyzedVarDecl(Type.INT, "y", analyzedIntLiteral(20, Type.INT)),
+                    analyzedAssignment(
+                        "x",
+                        analyzedBinaryOp(
+                            BinaryOperationType.ADD,
+                            analyzedVarExpr("x", Type.INT),
+                            analyzedVarExpr("y", Type.INT),
+                            Type.INT
+                        )
+                    )
+                ))
+                .statement(analyzedReturnStmt(analyzedVarExpr("x", Type.INT)))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "x", Type.INT)
+                .localVar(1, "y", Type.INT)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void type_checking() throws IOException {
-        AnalyzedProgram program = analyzeFile("type_checking.lux");
+        AnalyzedProgram actual = TestUtils.analyzeFile("type_checking.lux");
         
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        List<LocalVariable> localVariables = function.localVariables();
-        
-        // Should have 4 local variables (x, y, z, b)
-        assertEquals(4, localVariables.size());
-        
-        // Find variables by name and check their types
-        LocalVariable x = localVariables.stream().filter(v -> v.name().equals("x")).findFirst().orElseThrow();
-        assertEquals(Type.INT, x.type());
-        
-        LocalVariable b = localVariables.stream().filter(v -> v.name().equals("b")).findFirst().orElseThrow();
-        assertEquals(Type.BOOL, b.type());
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(Type.INT, "x", analyzedIntLiteral(10, Type.INT)))
+                .statement(analyzedVarDecl(Type.INT, "y", analyzedIntLiteral(20, Type.INT)))
+                .statement(analyzedVarDecl(
+                    Type.INT,
+                    "z",
+                    analyzedBinaryOp(
+                        BinaryOperationType.ADD,
+                        analyzedVarExpr("x", Type.INT),
+                        analyzedVarExpr("y", Type.INT),
+                        Type.INT
+                    )
+                ))
+                .statement(analyzedVarDecl(
+                    Type.BOOL,
+                    "b",
+                    analyzedBinaryOp(
+                        BinaryOperationType.GREATER,
+                        analyzedVarExpr("x", Type.INT),
+                        analyzedVarExpr("y", Type.INT),
+                        Type.BOOL
+                    )
+                ))
+                .statement(analyzedReturnStmt(analyzedVarExpr("z", Type.INT)))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "x", Type.INT)
+                .localVar(1, "y", Type.INT)
+                .localVar(2, "z", Type.INT)
+                .localVar(3, "b", Type.BOOL)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void control_flow() throws IOException {
-        AnalyzedProgram program = analyzeFile("control_flow.lux");
+        AnalyzedProgram actual = TestUtils.analyzeFile("control_flow.lux");
         
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        assertNotNull(function.body());
-        assertTrue(function.body().statements().size() > 0);
+        AnalyzedProgram expected =  analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(Type.INT, "x", analyzedIntLiteral(10, Type.INT)))
+                .statement(analyzedIfStmt(
+                    analyzedBinaryOp(
+                        BinaryOperationType.GREATER,
+                        analyzedVarExpr("x", Type.INT),
+                        analyzedIntLiteral(5, Type.INT),
+                        Type.BOOL
+                    ),
+                    analyzedCodeBlock(false,
+                        analyzedAssignment(
+                            "x",
+                            analyzedBinaryOp(
+                                BinaryOperationType.ADD,
+                                analyzedVarExpr("x", Type.INT),
+                                analyzedIntLiteral(1, Type.INT),
+                                Type.INT
+                            )
+                        )
+                    ),
+                    analyzedCodeBlock(false,
+                        analyzedAssignment(
+                            "x",
+                            analyzedBinaryOp(
+                                BinaryOperationType.SUB,
+                                analyzedVarExpr("x", Type.INT),
+                                analyzedIntLiteral(1, Type.INT),
+                                Type.INT
+                            )
+                        )
+                    ),
+                    false
+                ))
+                .statement(analyzedWhileStmt(
+                    analyzedBinaryOp(
+                        BinaryOperationType.LESS,
+                        analyzedVarExpr("x", Type.INT),
+                        analyzedIntLiteral(20, Type.INT),
+                        Type.BOOL
+                    ),
+                    analyzedCodeBlock(
+                        false,
+                        analyzedAssignment(
+                            "x",
+                            analyzedBinaryOp(
+                                BinaryOperationType.ADD,
+                                analyzedVarExpr("x", Type.INT),
+                                analyzedIntLiteral(1, Type.INT),
+                                Type.INT
+                                )
+                            )
+                        ),
+                    false
+                ))
+                .statement(analyzedReturnStmt(analyzedVarExpr("x", Type.INT)))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "x", Type.INT)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void for_loop() throws IOException {
-        AnalyzedProgram program = analyzeFile("for_loop.lux");
-        
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        List<LocalVariable> localVariables = function.localVariables();
-        
-        // Should have 2 local variables (sum and i)
-        assertEquals(2, localVariables.size());
-        
-        // Both should be INT type
-        assertTrue(localVariables.stream().allMatch(v -> v.type() == Type.INT));
+        AnalyzedProgram actual = TestUtils.analyzeFile("for_loop.lux");
+
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(
+                    Type.INT,
+                    "sum",
+                    analyzedIntLiteral(0, Type.INT)
+                ))
+                .statement(analyzedForStmt(
+                    analyzedVarDecl(Type.INT, "i", analyzedIntLiteral(0, Type.INT)),
+                    analyzedBinaryOp(
+                        BinaryOperationType.LESS,
+                        analyzedVarExpr("i", Type.INT),
+                        analyzedIntLiteral(10, Type.INT),
+                        Type.BOOL
+                    ),
+                    analyzedAssignment(
+                        "i",
+                        analyzedBinaryOp(
+                            BinaryOperationType.ADD,
+                            analyzedVarExpr("i", Type.INT),
+                            analyzedIntLiteral(1, Type.INT),
+                            Type.INT
+                        )
+                    ),
+                    analyzedCodeBlock(
+                        false,
+                        analyzedAssignment(
+                            "sum",
+                            analyzedBinaryOp(
+                                BinaryOperationType.ADD,
+                                analyzedVarExpr("sum", Type.INT),
+                                analyzedVarExpr("i", Type.INT),
+                                Type.INT
+                            )
+                        )
+                    ),
+                    false
+                ))
+                .statement(analyzedReturnStmt(analyzedVarExpr("sum", Type.INT)))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "sum", Type.INT)
+                .localVar(1, "i", Type.INT)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void expressions() throws IOException {
-        AnalyzedProgram program = analyzeFile("expressions.lux");
-        
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        List<LocalVariable> localVariables = function.localVariables();
-        
-        // Should have 3 local variables (a, b, c)
-        assertEquals(3, localVariables.size());
-        
-        // Check types
-        LocalVariable a = localVariables.stream().filter(v -> v.name().equals("a")).findFirst().orElseThrow();
-        assertEquals(Type.INT, a.type());
-        
-        LocalVariable c = localVariables.stream().filter(v -> v.name().equals("c")).findFirst().orElseThrow();
-        assertEquals(Type.BOOL, c.type());
+        AnalyzedProgram actual = TestUtils.analyzeFile("expressions.lux");
+
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(
+                    Type.INT,
+                    "a",
+                    analyzedBinaryOp(
+                        BinaryOperationType.ADD,
+                        analyzedIntLiteral(5, Type.INT),
+                        analyzedBinaryOp(
+                            BinaryOperationType.MULT,
+                            analyzedIntLiteral(10, Type.INT),
+                            analyzedIntLiteral(2, Type.INT),
+                            Type.INT
+                        ),
+                        Type.INT
+                    )
+                ))
+                .statement(analyzedVarDecl(
+                    Type.INT,
+                    "b",
+                    analyzedBinaryOp(
+                        BinaryOperationType.MULT,
+                        analyzedBinaryOp(
+                            BinaryOperationType.ADD,
+                            analyzedIntLiteral(5, Type.INT),
+                            analyzedIntLiteral(10, Type.INT),
+                            Type.INT
+                        ),
+                        analyzedIntLiteral(2, Type.INT),
+                        Type.INT
+                    )
+                ))
+                .statement(analyzedVarDecl(
+                    Type.BOOL,
+                    "c",
+                    analyzedBinaryOp(
+                        BinaryOperationType.LOGICAL_AND,
+                        analyzedBinaryOp(
+                            BinaryOperationType.GREATER,
+                            analyzedVarExpr("a", Type.INT),
+                            analyzedVarExpr("b", Type.INT),
+                            Type.BOOL
+                        ),
+                        analyzedBinaryOp(
+                            BinaryOperationType.LESS,
+                            analyzedVarExpr("b", Type.INT),
+                            analyzedIntLiteral(100, Type.INT),
+                            Type.BOOL
+                        ),
+                        Type.BOOL
+                    )
+                ))
+                .statement(analyzedReturnStmt(
+                    analyzedBinaryOp(
+                        BinaryOperationType.ADD,
+                        analyzedVarExpr("a", Type.INT),
+                        analyzedVarExpr("b", Type.INT),
+                        Type.INT
+                    )
+                ))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "a", Type.INT)
+                .localVar(1, "b", Type.INT)
+                .localVar(2, "c", Type.BOOL)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void literal_types() throws IOException {
-        AnalyzedProgram program = analyzeFile("literal_types.lux");
-        
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        List<LocalVariable> localVariables = function.localVariables();
-        
-        // Should have 5 local variables (i, l, f, d, b)
-        assertEquals(5, localVariables.size());
-        
-        // Check individual types
-        LocalVariable i = localVariables.stream().filter(v -> v.name().equals("i")).findFirst().orElseThrow();
-        assertEquals(Type.INT, i.type());
-        
-        LocalVariable l = localVariables.stream().filter(v -> v.name().equals("l")).findFirst().orElseThrow();
-        assertEquals(Type.LONG, l.type());
-        
-        LocalVariable f = localVariables.stream().filter(v -> v.name().equals("f")).findFirst().orElseThrow();
-        assertEquals(Type.FLOAT, f.type());
-        
-        LocalVariable d = localVariables.stream().filter(v -> v.name().equals("d")).findFirst().orElseThrow();
-        assertEquals(Type.DOUBLE, d.type());
-        
-        LocalVariable b = localVariables.stream().filter(v -> v.name().equals("b")).findFirst().orElseThrow();
-        assertEquals(Type.BOOL, b.type());
+        AnalyzedProgram actual = TestUtils.analyzeFile("literal_types.lux");
+
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.INT)
+                .name("main")
+                .statement(analyzedVarDecl(Type.INT, "i", analyzedIntLiteral(42, Type.INT)))
+                .statement(analyzedVarDecl(Type.LONG, "l", analyzedIntLiteral(42L, Type.LONG)))
+                .statement(analyzedVarDecl(Type.FLOAT, "f", analyzedFPLiteral(3.14F, Type.FLOAT)))
+                .statement(analyzedVarDecl(Type.DOUBLE, "d", analyzedFPLiteral(3.14, Type.DOUBLE)))
+                .statement(analyzedVarDecl(Type.BOOL, "b", analyzedBoolLiteral(true)))
+                .statement(analyzedReturnStmt(analyzedVarExpr("i", Type.INT)))
+                .hasGuaranteedReturn(true)
+                .localVar(0, "i", Type.INT)
+                .localVar(1, "l", Type.LONG)
+                .localVar(2, "f", Type.FLOAT)
+                .localVar(3, "d", Type.DOUBLE)
+                .localVar(4, "b", Type.BOOL)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 
     @Test
     public void empty_return() throws IOException {
-        AnalyzedProgram program = analyzeFile("empty_return.lux");
+        AnalyzedProgram actual = TestUtils.analyzeFile("empty_return.lux");
         
-        AnalyzedFunctionDeclaration function = program.functionDeclarations().get(0);
-        assertEquals("empty", function.name());
-        assertEquals(Type.VOID, function.returnType());
-        assertEquals(0, function.localVariables().size());
+        AnalyzedProgram expected = analyzedProgram(
+            analyzedFunctionBuilder()
+                .returnType(Type.VOID)
+                .name("empty")
+                .statement(analyzedReturnStmt())
+                .hasGuaranteedReturn(true)
+                .build()
+        );
+
+        assertThat(actual)
+            .usingRecursiveComparison()
+            .ignoringFieldsMatchingRegexes(".*sourceInfo")
+            .isEqualTo(expected);
     }
 }
