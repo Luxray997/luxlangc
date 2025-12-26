@@ -548,7 +548,7 @@ public class Parser {
             }
             default -> {
                 errors.add(new NotAnExpressionError(currentToken));
-                yield null;
+                throw new FatalParsingException();
             }
         };
     }

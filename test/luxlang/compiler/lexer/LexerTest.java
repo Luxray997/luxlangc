@@ -1,5 +1,7 @@
 package luxlang.compiler.lexer;
 
+import luxlang.compiler.errors.SourceCodeError;
+import luxlang.compiler.lexer.errors.UnexpectedTokenError;
 import luxlang.compiler.lexer.objects.Token;
 import luxlang.compiler.utils.TestUtils;
 import org.junit.jupiter.api.Test;
@@ -9,6 +11,8 @@ import java.util.List;
 
 import static luxlang.compiler.utils.TokenListBuilder.tokenListBuilder;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class LexerTest {
@@ -469,12 +473,107 @@ public class LexerTest {
     }
 
     @Test
-    public void unexpected_character() throws IOException {
-        String input = TestUtils.readTestFile(LEXER_SUBDIRECTORY, "unexpected_character.lux");
+    public void error_unexpected_at_symbol() {
+        String input = "@";
 
         Lexer target = new Lexer(input);
         LexingResult result = target.lex();
 
         assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors)
+            .singleElement(type(UnexpectedTokenError.class))
+            .extracting(SourceCodeError::line, SourceCodeError::column)
+            .containsExactly(1, 1);
+    }
+
+    @Test
+    public void error_unexpected_hash_symbol() {
+        String input = "#";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(UnexpectedTokenError.class));
+    }
+
+    @Test
+    public void error_unexpected_dollar_sign() {
+        String input = "$";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(UnexpectedTokenError.class));
+    }
+
+    @Test
+    public void error_unexpected_question_mark() {
+        String input = "?";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(UnexpectedTokenError.class));
+    }
+
+    @Test
+    public void error_unexpected_character_after_valid_tokens() {
+        String input = "int x @ y";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors)
+            .singleElement(type(UnexpectedTokenError.class))
+            .extracting(SourceCodeError::line, SourceCodeError::column)
+            .containsExactly(1, 7);
+    }
+
+    @Test
+    public void error_unexpected_character_at_specific_line() {
+        String input = "int x = 1;\n@";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors)
+            .singleElement(type(UnexpectedTokenError.class))
+            .extracting(SourceCodeError::line, SourceCodeError::column)
+            .containsExactly(2, 1);
+    }
+
+    @Test
+    public void error_unexpected_backslash() {
+        String input = "\\";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(UnexpectedTokenError.class));
+    }
+
+    @Test
+    public void error_unexpected_backtick() {
+        String input = "`";
+
+        Lexer target = new Lexer(input);
+        LexingResult result = target.lex();
+
+        assertInstanceOf(LexingResult.Failure.class, result);
+        var errors = ((LexingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(UnexpectedTokenError.class));
     }
 }

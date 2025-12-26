@@ -79,6 +79,28 @@ public class AstBuilder {
         return new WhileStatement(condition, body, TestUtils.dummySourceInfo());
     }
 
+    public static DoWhileStatement doWhileStmt(Statement body, Expression condition) {
+        return new DoWhileStatement(body, condition, TestUtils.dummySourceInfo());
+    }
+
+    public static ForStatement forStmt(
+            ForStatement.Initializer initializer,
+            Expression condition,
+            Assignment update,
+            Statement body) {
+        return new ForStatement(
+            Optional.ofNullable(initializer),
+            Optional.ofNullable(condition),
+            Optional.ofNullable(update),
+            body,
+            TestUtils.dummySourceInfo()
+        );
+    }
+
+    public static FloatingPointLiteral floatLiteral(String value) {
+        return new FloatingPointLiteral(value, TestUtils.dummySourceInfo());
+    }
+
     public static Parameter param(Type type, String name) {
         return new Parameter(type, name, TestUtils.dummySourceInfo());
     }

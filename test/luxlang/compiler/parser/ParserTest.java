@@ -1,6 +1,7 @@
 package luxlang.compiler.parser;
 
 import luxlang.compiler.lexer.objects.Token;
+import luxlang.compiler.parser.errors.*;
 import luxlang.compiler.parser.nodes.*;
 import luxlang.compiler.parser.nodes.expressions.BinaryOperation.BinaryOperationType;
 import luxlang.compiler.parser.nodes.expressions.UnaryOperation.UnaryOperationType;
@@ -11,9 +12,9 @@ import java.util.List;
 import static luxlang.compiler.utils.AstBuilder.*;
 import static luxlang.compiler.utils.TokenListBuilder.tokenListBuilder;
 import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.InstanceOfAssertFactories.type;
 
 public class ParserTest {
-
     @Test
     public void simple_function() {
         // int main() {
@@ -321,5 +322,208 @@ public class ParserTest {
             .usingRecursiveComparison()
             .ignoringFieldsMatchingRegexes(".*sourceInfo")
             .isEqualTo(expected);
+    }
+
+    @Test
+    public void error_unexpected_token_missing_semicolon() {
+        // int main() { return 0 }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen().leftBrace()
+            .keywordReturn().space().integerLiteral("0").space()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(UnexpectedKindError.class));
+    }
+
+    @Test
+    public void error_unexpected_token_missing_right_paren() {
+        // int main( { return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().leftBrace()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .satisfiesAnyOf(
+                e -> assertThat(e).isInstanceOf(UnexpectedKindError.class),
+                e -> assertThat(e).isInstanceOf(NotATypeError.class)
+            );
+    }
+
+    @Test
+    public void error_unexpected_token_missing_left_brace() {
+        // int main() return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(UnexpectedKindError.class);
+    }
+
+    @Test
+    public void error_not_a_type() {
+        // foo main() { return 0; }
+        List<Token> input = tokenListBuilder()
+            .identifier("foo").identifier("main").leftParen().rightParen().leftBrace()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(NotATypeError.class);
+    }
+
+    @Test
+    public void error_not_a_statement() {
+        // int main() { + return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen().leftBrace()
+            .add()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors).singleElement(type(NotAStatementError.class));
+    }
+
+    @Test
+    public void error_not_an_expression_in_variable_init() {
+        // int main() { int x = ; return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen().leftBrace()
+            .typeInt().space().identifier("x").assign().semicolon()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(NotAnExpressionError.class);
+    }
+
+    @Test
+    public void error_missing_function_name() {
+        // int () { return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().leftParen().rightParen().leftBrace()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(UnexpectedKindError.class);
+    }
+
+    @Test
+    public void error_missing_condition_parentheses() {
+        // int main() { if true { return 1; } return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen().leftBrace()
+            .keywordIf().space().trueLiteral().leftBrace()
+            .keywordReturn().space().integerLiteral("1").semicolon()
+            .rightBrace()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(UnexpectedKindError.class);
+    }
+
+    @Test
+    public void error_missing_assignment_operator() {
+        // int main() { int x 5; return 0; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen().leftBrace()
+            .typeInt().space().identifier("x").space().integerLiteral("5").semicolon()
+            .keywordReturn().space().integerLiteral("0").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(UnexpectedKindError.class);
+    }
+
+    @Test
+    public void error_unclosed_parenthesis_in_expression() {
+        // int main() { return (5; }
+        List<Token> input = tokenListBuilder()
+            .typeInt().identifier("main").leftParen().rightParen().leftBrace()
+            .keywordReturn().space().leftParen().integerLiteral("5").semicolon()
+            .rightBrace().eof()
+            .build();
+
+        Parser parser = new Parser(input);
+        ParsingResult result = parser.parse();
+
+        assertThat(result).isInstanceOf(ParsingResult.Failure.class);
+        var errors = ((ParsingResult.Failure) result).errors();
+        assertThat(errors)
+            .isNotEmpty()
+            .first()
+            .isInstanceOf(UnexpectedKindError.class);
     }
 }

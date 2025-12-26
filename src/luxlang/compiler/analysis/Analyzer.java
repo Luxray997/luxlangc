@@ -118,24 +118,24 @@ public class Analyzer {
         return switch (statement) {
             case CodeBlock           nestedCodeBlock     -> analyzeCodeBlock(nestedCodeBlock, scope, functionReturnType);
             case IfStatement         ifStatement         -> analyzeIfStatement(ifStatement, scope, functionReturnType);
-            case WhileStatement whileStatement      -> analyzeWhileStatement(whileStatement, scope, functionReturnType);
-            case DoWhileStatement doWhileStatement    -> analyzeDoWhileStatement(doWhileStatement, scope, functionReturnType);
+            case WhileStatement      whileStatement      -> analyzeWhileStatement(whileStatement, scope, functionReturnType);
+            case DoWhileStatement    doWhileStatement    -> analyzeDoWhileStatement(doWhileStatement, scope, functionReturnType);
             case ForStatement        forStatement        -> analyzeForStatement(forStatement, scope, functionReturnType);
             case ReturnStatement     returnStatement     -> analyzeReturnStatement(returnStatement, scope, functionReturnType);
             case VariableDeclaration variableDeclaration -> analyzeVariableDeclaration(variableDeclaration, scope);
-            case Assignment assignment          -> analyzeAssignment(assignment, scope);
+            case Assignment          assignment          -> analyzeAssignment(assignment, scope);
         };
     }
 
     private AnalyzedExpression analyzeExpression(Expression expression, Scope scope) {
         return switch (expression) {
             case FunctionCall         functionCall         -> analyzeFunctionCall(functionCall, scope);
-            case BinaryOperation binaryOperation      -> analyzeBinaryOperation(binaryOperation, scope);
-            case UnaryOperation unaryOperation       -> analyzeUnaryOperation(unaryOperation, scope);
+            case BinaryOperation      binaryOperation      -> analyzeBinaryOperation(binaryOperation, scope);
+            case UnaryOperation       unaryOperation       -> analyzeUnaryOperation(unaryOperation, scope);
             case VariableExpression   variableExpression   -> analyzeVariableExpression(variableExpression, scope);
             case FloatingPointLiteral floatingPointLiteral -> analyzeFloatingPointLiteral(floatingPointLiteral);
-            case IntegerLiteral integerLiteral       -> analyzeIntegerLiteral(integerLiteral);
-            case BooleanLiteral booleanLiteral       -> analyzeBooleanLiteral(booleanLiteral);
+            case IntegerLiteral       integerLiteral       -> analyzeIntegerLiteral(integerLiteral);
+            case BooleanLiteral       booleanLiteral       -> analyzeBooleanLiteral(booleanLiteral);
         };
     }
 
@@ -242,6 +242,9 @@ public class Analyzer {
             default -> {
                 if (exactValue.compareTo(NumberLimits.INT_MAX_VALUE) > 0 || exactValue.compareTo(NumberLimits.INT_MIN_VALUE) < 0) {
                     errors.add(new LiteralOverflowError(integerLiteral, Type.INT));
+                    // The value will not be returned since there's an error, so it's fine to
+                    // return 0 to continue analysis without crashing
+                    yield new AnalyzedIntegerLiteral(0, Type.INT, integerLiteral.sourceInfo());
                 }
 
                 int value = Integer.parseInt(suffixRemoved);
