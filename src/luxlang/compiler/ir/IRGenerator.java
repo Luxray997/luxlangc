@@ -5,6 +5,7 @@ import luxlang.compiler.analysis.nodes.AnalyzedProgram;
 import luxlang.compiler.analysis.nodes.expressions.*;
 import luxlang.compiler.analysis.nodes.statements.*;
 import luxlang.compiler.ir.instructions.*;
+import luxlang.compiler.ir.objects.*;
 import luxlang.compiler.ir.values.*;
 import luxlang.compiler.parser.nodes.Parameter;
 import luxlang.compiler.parser.nodes.Type;
@@ -27,6 +28,8 @@ public class IRGenerator {
     public IRGenerator(AnalyzedProgram program) {
         this.program = program;
     }
+
+    record BuiltExpressionResult(IRValue value, BasicBlock lastBlock) { }
 
     public IRModule generate() {
         List<IRFunction> irFunctions = new ArrayList<>();

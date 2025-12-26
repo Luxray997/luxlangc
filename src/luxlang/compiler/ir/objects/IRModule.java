@@ -1,4 +1,4 @@
-package luxlang.compiler.ir;
+package luxlang.compiler.ir.objects;
 
 import java.util.List;
 import java.util.stream.Collectors;

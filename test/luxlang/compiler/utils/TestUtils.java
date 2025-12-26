@@ -4,7 +4,7 @@ import luxlang.compiler.analysis.AnalysisResult;
 import luxlang.compiler.analysis.Analyzer;
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
 import luxlang.compiler.ir.IRGenerator;
-import luxlang.compiler.ir.IRModule;
+import luxlang.compiler.ir.objects.IRModule;
 import luxlang.compiler.lexer.Lexer;
 import luxlang.compiler.lexer.LexingResult;
 import luxlang.compiler.lexer.objects.Token;

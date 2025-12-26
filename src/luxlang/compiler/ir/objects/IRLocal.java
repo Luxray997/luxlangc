@@ -1,4 +1,4 @@
-package luxlang.compiler.ir;
+package luxlang.compiler.ir.objects;
 
 import luxlang.compiler.analysis.nodes.LocalVariable;
 import luxlang.compiler.parser.nodes.Type;

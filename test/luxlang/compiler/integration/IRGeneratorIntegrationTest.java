@@ -1,6 +1,6 @@
 package luxlang.compiler.integration;
 
-import luxlang.compiler.ir.IRModule;
+import luxlang.compiler.ir.objects.IRModule;
 import luxlang.compiler.utils.TestUtils;
 import org.junit.jupiter.api.Test;
 

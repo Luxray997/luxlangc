@@ -1,4 +1,4 @@
-package luxlang.compiler.ir;
+package luxlang.compiler.ir.objects;
 
 import luxlang.compiler.ir.instructions.RegularInstruction;
 import luxlang.compiler.ir.instructions.TerminatorInstruction;

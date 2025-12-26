@@ -1,6 +1,6 @@
 package luxlang.compiler.ir.instructions;
 
-import luxlang.compiler.ir.BasicBlock;
+import luxlang.compiler.ir.objects.BasicBlock;
 
 public record UnconditionalBranch(BasicBlock target) implements TerminatorInstruction {
     @Override

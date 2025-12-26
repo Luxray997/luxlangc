@@ -1,6 +1,7 @@
 package luxlang.compiler.ir;
 
 import luxlang.compiler.analysis.nodes.AnalyzedProgram;
+import luxlang.compiler.ir.objects.IRModule;
 import luxlang.compiler.parser.nodes.Type;
 import luxlang.compiler.parser.nodes.expressions.BinaryOperation.BinaryOperationType;
 import luxlang.compiler.utils.TestUtils;

@@ -10,7 +10,7 @@ public record DuplicateVariableNameError(
         Token endToken
 ) implements AnalysisError {
     private static final String REASON_TEMPLATE_VARIABLE = "Variable with name '%s' conflicts with another variable in scope";
-    private static final String REASON_TEMPLATE_PARAMETER = "Variable with name '%s' conflicts with another variable in scope";
+    private static final String REASON_TEMPLATE_PARAMETER = "Parameter with name '%s' conflicts with another variable in scope";
 
     public DuplicateVariableNameError(Parameter parameter) {
         this(
