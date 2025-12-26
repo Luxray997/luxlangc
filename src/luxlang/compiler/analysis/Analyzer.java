@@ -173,7 +173,6 @@ public class Analyzer {
         return new AnalyzedUnaryOperation(operation, analyzedOperand, resultType, unaryOperation.sourceInfo());
     }
 
-
     private AnalyzedIntegerLiteral analyzeIntegerLiteral(IntegerLiteral integerLiteral) {
         String literal = integerLiteral.value().toUpperCase();
         String suffixRemoved = literal.replaceAll("[LUSB]", "");
@@ -253,30 +252,6 @@ public class Analyzer {
         };
     }
 
-    private AnalyzedFunctionCall analyzeFunctionCall(FunctionCall functionCall, Scope scope) {
-        if (!scope.hasFunction(functionCall.name())) {
-            errors.add(new UndefinedFunctionError(functionCall));
-            return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.ERROR, functionCall.sourceInfo());
-        }
-
-        FunctionSymbol target = scope.getFunction(functionCall.name());
-
-        List<Type> parameterTypes = target.parameterTypes();
-        List<AnalyzedExpression> analyzedArguments = new ArrayList<>();
-        List<Type> argumentTypes = new ArrayList<>();
-        for (Expression argument : functionCall.arguments()) {
-            var analyzedArgument = analyzeExpression(argument, scope);
-            analyzedArguments.add(analyzedArgument);
-            argumentTypes.add(analyzedArgument.resultType());
-        }
-
-        if (!argumentTypes.contains(Type.ERROR) && !argumentTypes.equals(parameterTypes)) {
-            errors.add(new ArgumentTypeMismatchError(functionCall, argumentTypes, target));
-        }
-
-        return new AnalyzedFunctionCall(functionCall.name(), analyzedArguments, target.returnType(), functionCall.sourceInfo());
-    }
-
     private AnalyzedFloatingPointLiteral analyzeFloatingPointLiteral(FloatingPointLiteral floatingPointLiteral) {
         String literal = floatingPointLiteral.value();
         Type type = switch (literal.charAt(literal.length() - 1)) {
@@ -305,6 +280,30 @@ public class Analyzer {
             }
             default -> throw new IllegalStateException("Unexpected type of floating point literal");
         };
+    }
+
+    private AnalyzedFunctionCall analyzeFunctionCall(FunctionCall functionCall, Scope scope) {
+        if (!scope.hasFunction(functionCall.name())) {
+            errors.add(new UndefinedFunctionError(functionCall));
+            return new AnalyzedFunctionCall(functionCall.name(), List.of(), Type.ERROR, functionCall.sourceInfo());
+        }
+
+        FunctionSymbol target = scope.getFunction(functionCall.name());
+
+        List<Type> parameterTypes = target.parameterTypes();
+        List<AnalyzedExpression> analyzedArguments = new ArrayList<>();
+        List<Type> argumentTypes = new ArrayList<>();
+        for (Expression argument : functionCall.arguments()) {
+            var analyzedArgument = analyzeExpression(argument, scope);
+            analyzedArguments.add(analyzedArgument);
+            argumentTypes.add(analyzedArgument.resultType());
+        }
+
+        if (!argumentTypes.contains(Type.ERROR) && !argumentTypes.equals(parameterTypes)) {
+            errors.add(new ArgumentTypeMismatchError(functionCall, argumentTypes, target));
+        }
+
+        return new AnalyzedFunctionCall(functionCall.name(), analyzedArguments, target.returnType(), functionCall.sourceInfo());
     }
 
     private AnalyzedBinaryOperation analyzeBinaryOperation(BinaryOperation binaryOperation, Scope scope) {

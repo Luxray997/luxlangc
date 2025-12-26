@@ -25,8 +25,8 @@ public final class NumberLimits {
     public static final BigInteger UBYTE_MAX_VALUE = new BigInteger("FF", 16);
     public static final BigInteger UBYTE_MIN_VALUE = BigInteger.ZERO;
 
-    public static final BigInteger BYTE_MAX_VALUE = new BigInteger(String.valueOf(Short.MAX_VALUE));
-    public static final BigInteger BYTE_MIN_VALUE = new BigInteger(String.valueOf(Short.MIN_VALUE));
+    public static final BigInteger BYTE_MAX_VALUE = new BigInteger(String.valueOf(Byte.MAX_VALUE));
+    public static final BigInteger BYTE_MIN_VALUE = new BigInteger(String.valueOf(Byte.MIN_VALUE));
 
     public static final BigDecimal DOUBLE_MAX_VALUE = new BigDecimal(Double.MAX_VALUE);
     public static final BigDecimal DOUBLE_MIN_VALUE = new BigDecimal(Double.MIN_VALUE);

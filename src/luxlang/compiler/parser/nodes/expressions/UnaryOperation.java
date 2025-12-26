@@ -9,7 +9,7 @@ public record UnaryOperation(
     SourceInfo sourceInfo
 ) implements Expression {
     public enum UnaryOperationType {
-        LOGICAL_NOT("!="),
+        LOGICAL_NOT("!"),
         BITWISE_NOT("~"),
         NEGATION("-");
 
