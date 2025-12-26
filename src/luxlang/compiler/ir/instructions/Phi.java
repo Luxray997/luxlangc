@@ -10,4 +10,10 @@ public record Phi(
     IRValue value1,
     BasicBlock block2,
     IRValue value2
-) implements RegularInstruction { }
+) implements RegularInstruction {
+    @Override
+    public String serialize() {
+        return destination.serialize() + " = phi [" + value1.serialize() + ", " + block1.label() + "], " +
+            "[" + value2.serialize() + ", " + block2.label() + "]";
+    }
+}

@@ -6,4 +6,9 @@ import luxlang.compiler.ir.values.Temporary;
 public record Negate(
     Temporary destination,
     IRValue operand
-) implements RegularInstruction { }
+) implements RegularInstruction {
+    @Override
+    public String serialize() {
+        return destination.serialize() + " = neg " + operand.serialize();
+    }
+}

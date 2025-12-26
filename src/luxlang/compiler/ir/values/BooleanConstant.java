@@ -12,4 +12,9 @@ public record BooleanConstant(boolean value) implements IRValue {
     public Type type() {
         return Type.BOOL;
     }
+
+    @Override
+    public String serialize() {
+        return value ? "true" : "false";
+    }
 }

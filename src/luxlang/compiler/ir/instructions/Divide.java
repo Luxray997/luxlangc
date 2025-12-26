@@ -7,4 +7,9 @@ public record Divide(
     Temporary destination,
     IRValue operand1,
     IRValue operand2
-) implements RegularInstruction { }
+) implements RegularInstruction {
+    @Override
+    public String serialize() {
+        return destination.serialize() + " = div " + operand1.serialize() + ", " + operand2.serialize();
+    }
+}

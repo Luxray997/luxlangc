@@ -2,4 +2,9 @@ package luxlang.compiler.ir.values;
 
 import luxlang.compiler.parser.nodes.Type;
 
-public record LocalPointer(Type type, int localId) implements IRValue { }
+public record LocalPointer(Type type, int localId) implements IRValue {
+    @Override
+    public String serialize() {
+        return "%l" + localId;
+    }
+}

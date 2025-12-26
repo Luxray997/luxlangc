@@ -11,4 +11,11 @@ public record IRLocal(
     public static IRLocal from(LocalVariable localVariable) {
         return new IRLocal(localVariable.name(), localVariable.type(), localVariable.id());
     }
+
+    /**
+     * Format: local %l<index> : <type>  ; <name>
+     */
+    public String serialize() {
+        return "local %l" + index + " : " + type.lexeme() + "  ; " + name;
+    }
 }
