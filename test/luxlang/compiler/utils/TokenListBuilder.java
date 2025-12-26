@@ -63,7 +63,6 @@ public class TokenListBuilder {
 
     public TokenListBuilder typeLong() {
         return add(TokenKind.LONG, "long");
-
     }
 
     public TokenListBuilder typeUlong() {

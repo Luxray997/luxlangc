@@ -6,6 +6,7 @@ public record Temporary(Type type, int id) implements IRValue {
     /**
      * Format: %t<id>
      */
+    @Override
     public String serialize() {
         return "%t" + id;
     }
