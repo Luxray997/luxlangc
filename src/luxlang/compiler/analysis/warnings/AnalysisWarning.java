@@ -4,8 +4,11 @@ import luxlang.compiler.errors.SourceCodeWarning;
 import luxlang.compiler.lexer.objects.Token;
 
 public interface AnalysisWarning extends SourceCodeWarning {
+    @Override
     String reason();
+
     Token startToken();
+
     Token endToken();
 
     @Override

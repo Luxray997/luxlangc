@@ -4,7 +4,9 @@ import luxlang.compiler.errors.SourceCodeError;
 import luxlang.compiler.lexer.objects.Token;
 
 public interface ParsingError extends SourceCodeError {
+    @Override
     String reason();
+
     Token token();
 
     @Override

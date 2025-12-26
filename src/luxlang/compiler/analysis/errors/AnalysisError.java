@@ -4,8 +4,11 @@ import luxlang.compiler.errors.SourceCodeError;
 import luxlang.compiler.lexer.objects.Token;
 
 public interface AnalysisError extends SourceCodeError {
+    @Override
     String reason();
+
     Token startToken();
+
     Token endToken();
 
     @Override

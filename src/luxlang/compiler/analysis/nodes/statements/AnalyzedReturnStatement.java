@@ -9,6 +9,7 @@ public record AnalyzedReturnStatement(
     Optional<AnalyzedExpression> value,
     SourceInfo sourceInfo
 ) implements AnalyzedStatement {
+    @Override
     public boolean hasGuaranteedReturn() {
         return true;
     }
